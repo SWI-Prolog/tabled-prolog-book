@@ -1,0 +1,16 @@
+Machine: min(completed(det(efree(m0s1s2s))))
+  Transitions:
+    [sink]--0-->[sink]
+    [sink]--1-->[sink]
+    [sink]--2-->[sink]
+    [[q0],[q0,q1,q2]]--0-->[[q0],[q0,q1,q2]]
+    [[q0],[q0,q1,q2]]--1-->[[q1,q2]]
+    [[q0],[q0,q1,q2]]--2-->[[q2]]
+    [[q1,q2]]--0-->[sink]
+    [[q1,q2]]--1-->[[q1,q2]]
+    [[q1,q2]]--2-->[[q2]]
+    [[q2]]--0-->[sink]
+    [[q2]]--1-->[sink]
+    [[q2]]--2-->[[q2]]
+   Initial States: [[[q0],[q0,q1,q2]]]
+   Final States: [[[q0],[q0,q1,q2]],[[q2]],[[q1,q2]]]

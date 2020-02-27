@@ -1,0 +1,28 @@
+
+\vspace*{\itemsep}
+\longline
+\begin{sf}
+\begin{tabbing}
+  foooooo\=fooo\=fooo\=fooo\=fooooooooooooooooooooooooooo\=\kill
+  \> Algorithm Call\_Tabled\_Predicate({\em Subgoal}) \\
+  \> \> If {\em Subgoal} is in table \{ \\
+  \> \> \> If {\em Subgoal} has been completed \{ \\
+  \> \> \> \>  Set up choice point to backtrack through answer clauses; \\
+  \> \> \> \} \\
+  \> \> \> Otherwise if {\em Subgoal} has not been completed \{ \\
+  \> \> \> \>  Freeze stacks; \\
+  \> \> \> \>  Set up choicepoint to backtrack through answer clauses \\
+  \> \> \> \>  (and to suspend when the answer clauses are exhausted); \\
+  \> \> \> \} \\
+  \> \> \} \\
+  \> \> Otherwise if {\em Subgoal} is not in table \{ \\
+  \> \> \> Add {\em Subgoal} to table; \\
+  \> \> \} \\
+  \> \> Backtrack through program clauses; \\
+  \> \}
+\end{tabbing}
+\end{sf}
+\longline
+\vspace*{\itemsep}
+
+

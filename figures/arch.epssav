@@ -1,0 +1,125 @@
+%!PS-Adobe-2.0 EPSF
+%%Title: /tmp/xfig-fig010065
+%%Creator: fig2dev
+%%CreationDate: Fri Oct 15 20:21:17 1993
+%%For: tswift@sblapis1 (Terrance Swift,stu,123191,pegi,sun,5,)
+%%BoundingBox: 0 0 339 292
+%%Pages: 0
+%%EndComments
+/$F2psDict 200 dict def 
+$F2psDict begin
+$F2psDict /mtrx matrix put
+/l {lineto} bind def
+/m {moveto} bind def
+/s {stroke} bind def
+/n {newpath} bind def
+/gs {gsave} bind def
+/gr {grestore} bind def
+/clp {closepath} bind def
+/graycol {dup dup currentrgbcolor 4 -2 roll mul 4 -2 roll mul
+4 -2 roll mul setrgbcolor} bind def
+/col-1 {} def
+/col0 {0 0 0 setrgbcolor} bind def
+/col1 {0 0 1 setrgbcolor} bind def
+/col2 {0 1 0 setrgbcolor} bind def
+/col3 {0 1 1 setrgbcolor} bind def
+/col4 {1 0 0 setrgbcolor} bind def
+/col5 {1 0 1 setrgbcolor} bind def
+/col6 {1 1 0 setrgbcolor} bind def
+/col7 {1 1 1 setrgbcolor} bind def
+ /DrawEllipse {
+	/endangle exch def
+	/startangle exch def
+	/yrad exch def
+	/xrad exch def
+	/y exch def
+	/x exch def
+	/savematrix mtrx currentmatrix def
+	x y translate xrad yrad scale 0 0 1 startangle endangle arc
+	savematrix setmatrix
+	} def
+
+	end
+/$F2psBegin {$F2psDict begin /$F2psEnteredState save def} def
+/$F2psEnd {$F2psEnteredState restore end} def
+%%EndProlog
+
+$F2psBegin
+0 setlinecap 0 setlinejoin
+-35.0 339.0 translate 0.585 -0.585 scale
+0.500 setlinewidth
+% Polyline
+n 349 399 m 279 479 l gs col-1 s gr
+n 285.773 474.296 m 279.000 479.000 l 282.763 471.662 l gs 2 setlinejoin col-1 s gr
+% Polyline
+n 349 399 m 419 479 l gs col-1 s gr
+n 415.237 471.662 m 419.000 479.000 l 412.227 474.296 l gs 2 setlinejoin col-1 s gr
+% Polyline
+n 329 579 m 329 479 l  229 479 l  229 579 l 
+ clp gs col-1 s gr
+% Polyline
+n 469 579 m 469 479 l  369 479 l  369 579 l 
+ clp gs col-1 s gr
+/Times-Roman findfont 14.00 scalefont setfont
+259 519 m 
+gs 1 -1 scale (System) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+249 540 m 
+gs 1 -1 scale (Functions) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+404 519 m 
+gs 1 -1 scale (User ) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+389 540 m 
+gs 1 -1 scale (Programs) col-1 show gr
+% Ellipse
+n 429 129 50 50 0 360 DrawEllipse gs col-1 s gr
+% Ellipse
+n 269 129 50 50 0 360 DrawEllipse gs col-1 s gr
+% Ellipse
+n 109 129 50 50 0 360 DrawEllipse gs col-1 s gr
+% Ellipse
+n 589 129 50 50 0 360 DrawEllipse gs col-1 s gr
+% Polyline
+n 399 339 m 399 239 l  299 239 l  299 339 l 
+ clp gs col-1 s gr
+% Polyline
+n 589 179 m 349 239 l gs col-1 s gr
+n 357.246 239.000 m 349.000 239.000 l 356.276 235.119 l gs 2 setlinejoin col-1 s gr
+% Polyline
+n 113 178 m 353 238 l gs col-1 s gr
+n 345.724 234.119 m 353.000 238.000 l 344.754 238.000 l gs 2 setlinejoin col-1 s gr
+% Polyline
+n 269 179 m 349 239 l gs col-1 s gr
+n 343.800 232.600 m 349.000 239.000 l 341.400 235.800 l gs 2 setlinejoin col-1 s gr
+% Polyline
+n 431 178 m 351 238 l gs col-1 s gr
+n 358.600 234.800 m 351.000 238.000 l 356.200 231.600 l gs 2 setlinejoin col-1 s gr
+% Polyline
+n 349 339 m 349 399 l gs col-1 s gr
+n 351.000 391.000 m 349.000 399.000 l 347.000 391.000 l gs 2 setlinejoin col-1 s gr
+/Times-Roman findfont 14.00 scalefont setfont
+399 134 m 
+gs 1 -1 scale (Interpreter) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+79 134 m 
+gs 1 -1 scale (Compiler) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+564 140 m 
+gs 1 -1 scale (Programs) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+574 119 m 
+gs 1 -1 scale (User ) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+249 119 m 
+gs 1 -1 scale (System) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+329 294 m 
+gs 1 -1 scale (Engine) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+239 140 m 
+gs 1 -1 scale (Predicates) col-1 show gr
+/Times-Roman findfont 14.00 scalefont setfont
+359 379 m 
+gs 1 -1 scale (C interface) col-1 show gr
+$F2psEnd

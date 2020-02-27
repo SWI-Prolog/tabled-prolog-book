@@ -1,0 +1,28 @@
+
+\vspace*{\itemsep}
+\longline
+\begin{sf}
+\begin{tabbing}
+  foooooo\=fooo\=fooo\=fooo\=fooooooooooooooooooooooooooo\=\kill
+  \> Algorithm Switch\_envs({\em old\_breg,new\_breg}) \\
+  \> \> {\em Start\_trreg} := choice\_point\_trreg({\em old\_breg}); \\
+  \> \> {\em End\_trreg} :=  choice\_point\_trreg({\em new\_breg}); \\
+  \> \> {\em trreg} := choice\_point\_trreg({\em new\_breg}); \\
+  \> \> while ({\em Start\_trreg} != {\em End\_trreg}) \{ \\
+  \> \> \> while ({\em Start\_trreg} $>$ {\em End\_trreg}) \{ \\
+  \> \> \> \>  untrail(trail\_var({\em Start\_trreg})); \\
+  \> \> \> \>  {\em Start\_trreg} := trail\_parent({\em Start\_trreg}); \\
+  \> \> \> \} \\
+  \> \> \> while ({\em End\_trreg} $>$ {\em Start\_trreg}) \{ \\
+  \> \> \> \>   {\em End\_trreg} := trail\_parent({\em End\_trreg}); \\
+  \> \> \> \} \\
+  \> \> \} \\
+  \> \> {\em End\_trreg} := choice\_point\_trreg({\em tbreg}); \\
+  \> \> while ({\em End\_trreg} $>$ {\em Start\_trreg}) \{ \\
+  \> \> \> * trail\_var({\em End\_trreg}) := trail\_val({\em End\_trreg}); \\
+  \> \> \}
+\end{tabbing}
+\end{sf}
+\longline
+\vspace*{\itemsep}
+

@@ -1,0 +1,153 @@
+/* module usermod : LOADED. */
+
+		/* Same as module global*/
+
+/* module global : LOADED. */
+
+... ... BUCKET NO. 0
+... ... BUCKET NO. 1
+34418: a/0,	ORDI,	VISIBLE	,  0
+... ... BUCKET NO. 2
+34438: b/0,	ORDI,	VISIBLE	,  0
+... ... BUCKET NO. 3
+34458: c/0,	ORDI,	VISIBLE	,  0
+... ... BUCKET NO. 4
+... ... BUCKET NO. 5
+... ... BUCKET NO. 6
+... ... BUCKET NO. 7
+... ... BUCKET NO. 8
+... ... BUCKET NO. 9
+... ... BUCKET NO. 10
+... ... BUCKET NO. 11
+... ... BUCKET NO. 12
+... ... BUCKET NO. 13
+... ... BUCKET NO. 14
+... ... BUCKET NO. 15
+... ... BUCKET NO. 16
+... ... BUCKET NO. 17
+... ... BUCKET NO. 18
+343f8: p/2,	PRED,	VISIBLE	,  344c8
+... ... BUCKET NO. 19
+... ... BUCKET NO. 20
+... ... BUCKET NO. 21
+... ... BUCKET NO. 22
+... ... BUCKET NO. 23
+... ... BUCKET NO. 24
+... ... BUCKET NO. 25
+... ... BUCKET NO. 26
+... ... BUCKET NO. 27
+... ... BUCKET NO. 28
+... ... BUCKET NO. 29
+... ... BUCKET NO. 30
+... ... BUCKET NO. 31
+... ... BUCKET NO. 32
+... ... BUCKET NO. 33
+... ... BUCKET NO. 34
+... ... BUCKET NO. 35
+... ... BUCKET NO. 36
+... ... BUCKET NO. 37
+... ... BUCKET NO. 38
+... ... BUCKET NO. 39
+... ... BUCKET NO. 40
+... ... BUCKET NO. 41
+... ... BUCKET NO. 42
+... ... BUCKET NO. 43
+... ... BUCKET NO. 44
+... ... BUCKET NO. 45
+... ... BUCKET NO. 46
+... ... BUCKET NO. 47
+343b0: ,/2,	ORDI,	VISIBLE	,  0
+... ... BUCKET NO. 48
+... ... BUCKET NO. 49
+34390: ./2,	ORDI,	VISIBLE	,  0
+... ... BUCKET NO. 50
+... ... BUCKET NO. 51
+... ... BUCKET NO. 52
+... ... BUCKET NO. 53
+... ... BUCKET NO. 54
+... ... BUCKET NO. 55
+... ... BUCKET NO. 56
+... ... BUCKET NO. 57
+... ... BUCKET NO. 58
+... ... BUCKET NO. 59
+34478: _$main/0,	PRED,	VISIBLE	,  344b0
+... ... BUCKET NO. 60
+... ... BUCKET NO. 61
+... ... BUCKET NO. 62
+... ... BUCKET NO. 63
+... ... BUCKET NO. 64
+... ... BUCKET NO. 65
+... ... BUCKET NO. 66
+... ... BUCKET NO. 67
+... ... BUCKET NO. 68
+... ... BUCKET NO. 69
+... ... BUCKET NO. 70
+... ... BUCKET NO. 71
+... ... BUCKET NO. 72
+... ... BUCKET NO. 73
+34370: []/0,	ORDI,	VISIBLE	,  0
+... ... BUCKET NO. 74
+... ... BUCKET NO. 75
+... ... BUCKET NO. 76
+... ... BUCKET NO. 77
+... ... BUCKET NO. 78
+... ... BUCKET NO. 79
+... ... BUCKET NO. 80
+... ... BUCKET NO. 81
+... ... BUCKET NO. 82
+... ... BUCKET NO. 83
+... ... BUCKET NO. 84
+... ... BUCKET NO. 85
+... ... BUCKET NO. 86
+... ... BUCKET NO. 87
+... ... BUCKET NO. 88
+... ... BUCKET NO. 89
+... ... BUCKET NO. 90
+... ... BUCKET NO. 91
+... ... BUCKET NO. 92
+... ... BUCKET NO. 93
+... ... BUCKET NO. 94
+... ... BUCKET NO. 95
+... ... BUCKET NO. 96
+
+
+/*text below		*/
+
+
+New segment below 
+
+344b0	proceed
+
+New segment below 
+
+344c8	try	2	0x344e0
+344d0	retry	2	0x34524
+344d8	trust	2	0x3454c
+344e0	switchonbound	r1	0x34568	0x5
+344ec	try	2	0x344fc
+344f4	trust	2	0x34510
+344fc	getcon	r1	0x3442c
+34504	getcon	r2	0x3444c
+3450c	proceed
+34510	getcon	r1	0x3446c
+34518	getcon	r2	0x3444c
+34520	proceed
+34524	allocate
+34528	getpvar	v2	r2
+3452c	putpvar	v3	r2
+34530	call	4	0x343f8
+34538	putdval	v3	r1
+3453c	putdval	v2	r2
+34540	deallocate
+34544	execute	0x343f8
+3454c	movreg	r1	r3
+34550	movreg	r2	r1
+34554	movreg	r3	r2
+34558	execute	0x343f8
+hash table.... 
+34568:    344fc
+3456c:    2b4f6
+34570:    2b4f6
+34574:    2b4f6
+34578:    34510
+    end.... 

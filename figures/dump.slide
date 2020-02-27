@@ -1,0 +1,38 @@
+\documentstyle{article}
+
+\begin{document}
+\begin{tabular}
+{\tt 
+p/2: 	& switchontype	& C1a, L1, fail, fail \\
+	& switchoncon 	& [a: C1, b: C2] \\
+\\
+C1a:	& trymeelse	C2a, 2 			& {\em \%  	p(} \\
+C1:	& getcon	r1, a			& {\em \%  	  a,} \\
+	& getcon	r2, b			& {\em \%  	  b} \\
+	& proceed				& {\em \%   	 ).} \\
+\\
+C2a:	& trustme	2			& {\em \%  	p(} \\
+C2:	& getcon	r1, b			& {\em \%  	  b,} \\
+	& getcon	r2, c			& {\em \%  	  c} \\
+	& proceed				& {\em \%  	 ).} \\
+
+a/2: 	& switchontype	& C3a, C3a, C3a, C3a \\
+\\
+C3a:	& trymeelse	C4a, 2 		\\
+C3:	& allocate				& {\em \%  	a(} \\
+	& getpvar	v2, r2			& {\em \%  	  X,Y):-} \\
+	& putpvar	v3, r2			& {\em \%  	       a(X,Z}\\
+	& call		4, a/2			& {\em \%  	        ),} \\
+	& putdval	v3, r1			& {\em \%  	a(Z,} \\
+	& putdval	v2, r2			& {\em \%  	  Y} \\
+	& deallocate				& {\em \%  	 )} \\
+	& execute	a/2			& {\em \%  	  .} \\
+\\
+C4a:	& trustme	2 			\\
+C4:	& execute	p/2			& {\em \%  a(X,Y):-p(X,Y).} \\
+}
+\begin{center}
+WAM code for program 2.
+\end{center}
+\end{tabular}
+\end{document}
