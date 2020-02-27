@@ -1,2 +1,0 @@
-\contentsline {chapter}{\numberline {1}Negation in XSB}{1}
-\contentsline {subsection}{\numberline {1.0.1}Well-Founded Semantics}{1}
