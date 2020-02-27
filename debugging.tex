@@ -1,0 +1,67 @@
+\chapter{Debugging Tabled Programs}
+
+4-port Table Debugger.
+
+The names may not be the best, but they should be clear.
+
+\begin{enumerate}
+\item Call
+\begin{itemize}
+	\item Call Untabled
+ 
+	\item Call Tabled: New Subgoal
+
+	\item Call Tabled: Use Incomplete Table
+
+	\item Call Tabled: Use Completed Table
+\end{itemize}
+\item Exit
+\begin{itemize}
+	\item Exit Untabled
+	\item Check/Insert Answer followed by
+\begin{itemize}
+		\item Redundant Answer - fail 
+		\item Insert Answer -- succeed
+\end{itemize}
+\end{itemize}
+
+\item Redo 
+\begin{itemize}
+	\item Retry Program Clause
+	\item Retry Answer Clause
+\end{itemize}
+
+\item Fail 
+\begin{itemize}
+\item Fail Untabled
+\item Check Complete followed by
+\begin{itemize}
+\item Completing tables (table list)
+\item Rescheduling Answers for (table list)
+\end{itemize}
+\end{itemize}
+\end{enumerate}
+
+How does tabling affect the debugger commands
+
+Old commands : 
+
+Abort cleans up uncompleted tables.
+
+Skip , Leap should work.
+
+Break allows tables to be partially visible.
+
+
+New Commands: 
+
+Ancestors.  At least for tables.
+
+Various Table examination mechanisms built upon Table builtins.
+
+Show incomplete tabled subgoals.
+
+Show returns for a table.
+
+Show ancestors for each suspension of an incomplete tabled subgoal.
+

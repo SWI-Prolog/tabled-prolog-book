@@ -1,0 +1,138 @@
+
+%%\documentstyle[11pt,epsf]{report}
+\documentclass[11pt]{report}
+\usepackage{epsf}
+
+\pagestyle{headings}
+
+% LaTeX Size Stuff
+%-----------------
+\setlength{\topmargin}{-0.25in}
+\setlength{\headheight}{10pt}
+\setlength{\headsep}{30pt}
+\setlength{\oddsidemargin}{0.0in}
+\setlength{\evensidemargin}{0.0in}
+\setlength{\textheight}{8.5in}
+\setlength{\textwidth}{6.5in}
+\setlength{\footskip}{50pt}
+%\setlength{\footheight}{24pt}
+\setlength{\parskip}{4mm}               % space between paragraphs
+
+\def\cut{\mbox{\tt '!'/0}}
+\def\not{\mbox{${\tt '\backslash+'/1}$}}
+\def\sldnf{\mbox{${\tt \backslash+}$}}
+
+\newcommand{\ourprolog}{XSB}
+\newcommand{\smallourprolog}{xsb}
+\newcommand{\version}{Version 1.4.2}
+
+\newcommand{\qed}{\mbox{$\ \Box$}}
+\newcommand{\lqed}{\qed\vspace{.1in}}
+\newcommand{\nf}{\mbox{$\sim$}}
+\newcommand{\wt}{\mbox{$\widehat{T}$}}
+\newcommand{\as}{\mbox{$/\hspace{-2mm}>$}}
+\newcommand{\equi}{\mbox{$\leftrightarrow$}}
+\newcommand{\myeq}{\mbox{$\leftrightarrow$}}
+\newcommand{\myra}{\mbox{$\Rightarrow$}}
+\newcommand{\tab}{\hspace*{4em}}
+\newcommand{\ind}{\hspace*{2em}}
+\newcommand{\longline}{\noindent\rule{\textwidth}{.01in}}
+
+\newcommand{\bg}{\hspace*{.7cm}}
+\newcommand{\s}{\hspace*{.3cm}}
+
+\newcommand{\demo}[1]{\hspace*{1.5cm}{\tt #1}}
+\newcommand{\desc}[1]{\item[{\tt #1}]\hspace*{1mm}\newline}
+\newcommand{\desce}[1]{\item[{\tt #1}]}
+\newcommand{\ouritem}[1]{\item[{\mbox{\tt #1}}]\ \\}
+\newcommand{\ournewitem}[2]{\item[{\mbox{\tt #1}}]\hspace*{\fill}{\mbox{\sf #2}}\ \\}
+
+\newtheorem{example}{Example}[section]
+\newtheorem{proposition}{Proposition}[section]
+
+\newcommand{\stuff}[1]{
+        \begin{minipage}{4in}
+        {\tt \samepage
+        \begin{tabbing}
+        \hspace{8mm} \= \hspace{6mm} \= \hspace{10mm} \= \hspace{55mm} \= \kill
+        #1 \hfill
+        \end{tabbing}
+        }
+        \end{minipage}
+}
+\newtheorem{dummylemma}{Dummy}[section]
+\newtheorem{DefinitioN}[dummylemma]{\bf Definition}%[section]
+\newenvironment{definition}[1]
+               {\begin{DefinitioN}\rm {\bf (#1)}}{\hspace{1cm} \hfill \end{DefinitioN}}
+
+%------------------------------------------------------------
+%\input{predind.sty}
+%\makepredindex
+%\makeindex
+%------------------------------------------------------------
+
+\begin{document}
+
+\title{\bf Programming in Tabled Prolog \\ (very) DRAFT
+\footnote{This is a very early draft made available privately for
+those who might find it of interest.  I reserve all rights to this
+work. -dsw}
+}
+
+\author{% {\epsfxsize=230pt \epsfbox{xsb-logo.eps}}\\
+        \ \\ \ \\
+        {\em David S. Warren} \\ 
+        \ \\
+        {Department of Computer Science} \\
+        {SUNY @ Stony Brook} \\
+        {Stony Brook, NY 11794-4400, U.S.A.} \\
+        \ \\
+} 
+
+\date{\today}
+
+\maketitle
+
+\bibliographystyle{plain}
+
+\thispagestyle{empty}
+%\input{ack}
+\newpage
+
+\pagenumbering{roman}
+\tableofcontents
+\newpage        % Just to avoid a silly LaTeX bug with \pagenumbering
+  
+\pagenumbering{arabic}
+
+\input{intro}
+\input{prolog}
+\input{prolog_exercises}
+\input{fol}
+\input{fol_exercises}
+\input{datalog}
+\input{datalog_exercises}
+\input{grammars}
+\input{grammars_exercises}
+\input{automata}
+\input{automata_exercises}
+\input{dynprog}
+\input{dynprog_exercises}
+\input{hilog}
+\input{debugging}
+\input{aggreg}
+\input{incrtabling}
+\input{negation}
+\input{metaint}
+\input{modules}
+\input{files}
+\input{tablebi}
+\input{xsbsys}
+
+
+\bibliography{oldt}
+
+
+%\appendix
+
+\end{document}

@@ -1,0 +1,114 @@
+/* parse with tabling to get a lr(k)-like algorithm.  This passes a
+set of follow-ing strings as the follow set. */
+
+:- import length/2,append/3,member/2 from basics.
+at :- abolish_all_tables.
+
+% :- parse(t,2,[[]],0,15).
+
+:- table parse/5.
+parse(Sym,K,Follows,Str0,Str) :-
+	rule(Sym,SF),
+	parseSF(SF,K,Follows,Str0,Str).
+
+parseSF([],_,Follows,Str0,Str) :- !,Str0=Str,
+	member(Follow,Follows),
+	next_str(Follow,Str,_).
+parseSF([Sym|RB],K,Follows,Str0,Str) :- atomic(Sym),!,
+	firstKs(RB,K,Follows,FollowsSym),
+	parse(Sym,K,FollowsSym,Str0,Str1),
+	parseSF(RB,K,Follows,Str1,Str).
+parseSF([Terms|SF],K,Follows,Str0,Str) :- 
+	next_str(Terms,Str0,Str1),
+	parseSF(SF,K,Follows,Str1,Str).
+
+firstKs(SF,K,Follows,Firsts) :-
+	findall(First,firstK(SF,K,Follows,First),Firsts).
+
+firstK(SF,K,Follows,First) :-
+	first(SF,K,SFirst),
+	length(SFirst,N),
+	(N =:= K
+	 ->	First = SFirst
+	 ;	member(Follow,Follows),
+		append(SFirst,Follow,LFirst),
+		fk(LFirst,K,First)
+	).
+
+:- table first/3.
+first(_,K,First) :- K=:=0,!,First=[].
+first([],_,First) :- !,First=[].
+first([[]|Ss],K,First) :- !,
+	first(Ss,K,First).
+first([S|Ss],K,First) :- atomic(S),!,
+	rule(S,RB),
+	first(RB,K,First1),
+	append(First1,First2,First),
+	length(First1,K1),
+	K2 is K-K1,
+	first(Ss,K2,First2).
+first([Terms|Ss],K,First) :- !, 
+	length(Terms,K2),
+	(K2 > K
+	 ->	fk(Terms,K,First)
+	 ; K2 =:= K
+	 ->	First = Terms
+	 ;	append(Terms,FirstR,First),
+		K1 is K-K2,
+		first(Ss,K1,FirstR)
+	).
+
+fk(_,0,R) :- !,R=[].
+fk([],_,[]).
+fk([S|Ss],K,[S|Rs]) :- K1 is K-1, fk(Ss,K1,Rs).
+
+next_str([],S,S).
+next_str([Sym|Syms],S0,S) :- word(S0,Sym,S1),next_str(Syms,S1,S).
+
+/********************************************************************************************/
+:- table firstK/3.
+% firstK(SF,Follow,First)
+firstK([],_,[]).
+firstK([],[S|Fos],[S|Fis]) :- firstK([],Fos,Fis).
+firstK([NT|SF],Follow,First) :-
+	nonterminal(NT),
+	same_length(Follow,NTFol),
+	firstK(SF,Follow,NTFol),
+	rule(NT,Body),
+	firstK(Body,NTFol,First).
+firstK([T|SF],Fos,[T|Fis]) :-
+	\+ nonterminal(T),
+	firstK(SF,Fos,Fis).
+
+same_length([],[]).
+same_length([_|I],[_|O]) :- same_length(I,O).
+
+nonterminal(S) :- rule(S,_),!.
+
+
+/* S -> A B.
+   A -> aA | a.
+   B -> Bb | b.
+*/
+rule(t,[s,['$']]).
+rule(s,[a,b]).
+rule(a,[[a],a]).
+rule(a,[[a]]).
+rule(b,[b,[b]]).
+rule(b,[[b]]).
+
+word(0,a,1).
+word(1,a,2).
+word(2,a,3).
+word(3,a,4).
+word(4,a,5).
+word(5,a,6).
+word(6,a,7).
+word(7,a,8).
+word(8,a,9).
+word(9,a,10).
+word(10,a,11).
+word(11,a,12).
+word(12,b,13).
+word(13,b,14).
+word(14,'$',15).

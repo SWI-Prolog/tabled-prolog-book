@@ -1,0 +1,126 @@
+\section{Exercises}
+
+\begin{enumerate}
+
+\item
+In this problem you will explore how XSB handles transitive closure
+for binary relations defining various graphs.  The first task is to
+define predicates that generate those graphs.  In each case, we will
+assume that the graph predicate will always be called with the first
+argument bound.  Each graph will be parameterized by a number M, which
+will be defined by a Prolog fact: size/1.  So if M is 10000, there
+will be a fact:
+size(10000).
+defined in your Prolog program.
+
+\begin{enumerate}
+
+\item
+Define a binary predicate cycle/2 such that cycle(i,i+1) for 
+\begin{verbatim}
+0 =< i < M, and cycle(M,0).
+\end{verbatim}
+Draw a picture of this graph (with integers as nodes) for M = 8.
+
+\item
+Define a binary predicate tree/2 such that 
+\begin{verbatim}
+tree(i,2*i+1) for 0 =< i < M, and
+tree(i,2*i+2) for 0 =< i < M.
+\end{verbatim}
+Draw a picture of this graph (with integers as nodes) for M = 4.
+
+\item
+Define a binary predicate dline/2 such that
+\begin{verbatim}
+dline(i,i+1) if 0 =< i < M and i mod 4 = 0  (i.e. i is a multiple of 4)
+dline(i,i+2) if 0 =< i < M and i mod 4 = 0
+dline(i+1,i+4) if 0 =< i < M and i mod 4 = 0
+dline(i+2,i+4) if 0 =< i < M and i mod 4 = 0
+\end{verbatim}
+Draw a picture of this graph (with integers as nodes) for M = 12.
+\end{enumerate}
+
+\item
+For each of the predicates define in problem 1, give the rules for
+transitive closure of that graph, possible in three ways: the
+right-recursive definition, the left-recursive definition, and the
+doubly-recursive definition.  They should be named:
+
+\begin{verbatim}
+tc_cycle_rr/2 (for the right recursive transitive closure of cycle)
+tc_cycle_lr/2 (for the left recursive..)
+tc_cycle_dr/2 (for the doubly recursive..)
+
+tc_tree_rr/2  (right recursive tree)
+tc_tree_lr/2  (left recursive tree)
+
+tc_dline_rr/2 (right recursive)
+tc_dline_lr/2 (left recursive)
+\end{verbatim}
+
+You are to populate the following benchmarking table:
+
+\begin{verbatim}
+graph          tabled    M1   M2   M3  M4  M5  M6  M7  M8  M9  M10
+------------------------------------------------------------------
+tc_cycle_rr/2    Y 
+tc_cycle_lr/2    Y
+tc_cycle_dr/2    Y
+
+tc_tree_rr/2     N
+
+tc_tree_rr/2     Y
+tc_tree_lr/2     Y
+
+tc_dline_rr/2    N
+
+tc_dline_rr/2    Y
+tc_dline_lr/2    Y
+\end{verbatim}
+where M1 - M10 are integers, in increasing order that are chosen
+to show reasonable ranges of cpu times for all the benchmarks.  These
+benchmarks can vary significantly in speed, so to get a reasonable
+time for the fastest you'll need a reasonably large M10; any time
+greater than 30 seconds should be represented as TO (for time out).
+(I.e., cancel any query that takes longer, using ctrl-c.)  The
+"tabled" column having "Y" means that the corresponding transitive
+closure definition is declared as tabled.  If it is "N", it is not
+tabled, but simple Prolog is used.
+
+The values in the cells are the cpu-times for running XSB on the
+0-source query for the row.  E.g., the number in the <tc\_cycle\_rr/2,
+M1> cell should be the cputime to run the query tc\_cycle\_rr(0,X) (when
+tc\_cycle\_rr/2 is tabled) to find all X's reachable from 0.
+
+This can be done by the following query:
+\begin{verbatim}
+| ?- cputime(T0),(tc_cycle_rr(0,_),fail ; true), cputime(T1), 
+  Time is T1-T0, writeln(Time).
+\end{verbatim}
+
+You might find the following predicate helpful:
+
+\begin{verbatim}
+:- dynamic size/1.           % needed at beginning of code!
+:- import for/3 from basics.
+test(Goal,M) :-
+    N is M//10,              % 10 equal intervals
+    for(I,1,10),             % for I=0 to 10
+    NM is I*N,               % the next decile
+    abolish_all_tables,      % clear all tables
+    retractall(size(_)),     % clear old size
+    assert(size(NM)),        % set new size for base predicate
+    cputime(T0a),            % find cputime from start
+    (call(Goal),fail;true),  % do the query, all answers
+    cputime(T1a),
+    Timea is T1a-T0a,
+    writeln([Goal,NM,Timea]), % write out goal, size, and cputime
+    fail.
+\end{verbatim}
+
+And example call:
+\begin{verbatim}
+| ?- test(tc_cycle_lr(0,_),1000000).
+\end{verbatim}
+\end{enumerate}

@@ -1,0 +1,84 @@
+
+
+expr --> term, [+], expr.
+expr --> term.
+term --> factor, [*], term.
+term --> factor.
+factor --> [I], {integer(I)}.
+factor --> ['('], expr, [')'].
+
+% tests
+% expr([4,*,5,+,1],[]).
+% expr([1,+,3,*,'(',2,+,4,')'],[]).
+% expr([4,5,*],[]).
+
+% build parse tree
+
+/*
+expr(+(T,E)) --> term(T), [+], expr(E).
+expr(T) --> term(T).
+term(*(F,T)) --> factor(F), [*], term(T).
+term(F) --> factor(F).
+factor(I) --> [I], {integer(I)}.
+factor(E) --> ['('], expr(E), [')'].
+*/
+
+
+
+% evaluate expression
+expr(V) --> term(T), [+], expr(E), {V is T+E}.
+expr(T) --> term(T).
+term(V) --> factor(F), [*], term(T), {V is F*T}.
+term(F) --> factor(F).
+factor(I) --> [I], {integer(I)}.
+factor(E) --> ['('], expr(E), [')'].
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+emp_info(EmployeeNum,Lastname,Firstname) :-
+	employee(EmployeeNum, Lastname, Firstname, _StreetAddress, _City, _State, _Zipcode, _DepartmentNum, _Hiredate, _Salary).
+
+
+%EmployeenUM, Lastname, Firstname, StreetAddress, City, State, Zipcode, DepartmentNum, Hiredate, Salary
+employee(193,'Jones','John','173 Elm St.','Hoboken','NJ',1,1,'25 Jun 93',25500).
+employee(181,'Doe','Betty','11 Spring St.','Paterson','NJ',2,3,'12 May 91',28500).
+employee(198,'Smith','Al','2 Ace Ave.','Paterson','NJ',3,3,'12 Sep 93',27000).
+
+%DeptNum, DeptName, Manager
+department(1,'Grocery',181).
+department(3,'Deli',193).
+department(5,'Produce',199).
+
+
+
+f(david,iv).
+f(david,tessa).
+f(iv,david).
+
+fof(X,Y) :- f(X,Y).
+fof(X,Y) :- f(X,Z), fof(Z,Y).

@@ -1,0 +1,1309 @@
+\chapter{Introduction to First-Order Logic} \label{fol}
+
+This chapter introduces the basics of logic needed to understand the
+foundations of Prolog and logic programming.  We start with
+Propositional Logic and then move to first-order logic.
+
+\begin{verbatim}
+ Real World Situation                 Statements
+--------------------               -------------------
+|Pic of person      |--------------|''a red block is |
+|looking at a table |              | on the table''  |
+|with blocks on it  |          /   -------------------
+|with balloon saying|   person
+``a red block is on |    with
+the table'' and     |     L    \   What statements are about
+another person (with|              ----------------
+|L on chest) looking|--------------|  Table with  |
+|at them            |              |     blocks   |
+--------------------               ---------------
+\end{verbatim}
+Fig 11
+
+Figure 11 shows in cartoon form what logic tries to do.  On the left
+is a real-world situation of a person looking at a table with blocks
+on it and saying that ``a red block is on the table''.  There ia
+another person, our erstwhile logician, looking at this situation and
+trying to understand what's going on with the use of language.  The
+logician separates this mixed-up real-world situation into several
+parts to study them.  First she pulls herself out of the situation so
+she can study it ``from outside''.  Second she separates the statement
+into one component and the part of the real world that the statement
+is about into another component.  Her idea is that a statement is true
+or false when looked at in the context of the real-world component.
+For example, when we look at the table with the blocks, we will see
+that either the statement ``a red block is on the table'' is a true
+statement about that situation, i.e., there is indeed a block on the
+table whose color is red; or it is a false statement about that
+situation, i.e., looking at the blocks and table, we see that none of
+the blocks are red.  So the meaning of a statement with respect to a
+real-world situation is either {\em true} or {\em false}, depending on
+whether the statement makes a true or false assection about that
+world.  This is called a correspondence theory of meaning, since
+statements ``mean'' true or false depending on how they ``correspond''
+with a world situation.
+
+As an aside, note that there are other possible theories of language
+meaning.  As of this writing, there is a US presidential nominating
+process going on.  It is rather clear to me that the language used in
+that process does not depend on a correspondence theory of meaning.  A
+suprisingly large number of utterances and clearly not true with
+respect to the world situation, so claiming that politicians make
+statements that are true is certainly not an adequate account of
+language in that context.  Another theory of language, going by the
+name of ``speech-acts'', models statements as efforts by one person to
+cause another person to construct in his head certain beliefs.  I
+suspect political discourse is much better modeled by such a theory of
+language.  Of course there is the question of what a belief is, and
+the formaliztion of that may require some correspondence theory of a
+belief and the world.  End of aside.
+
+Returning to our logician (whose role we now play), the problem is how
+to formalize the language and the world situation in such a way that
+we can precisely say when a sentence is true (or false) in a world
+situation.  To do this, we need to precisely formalize the language
+component, which is called the syntax of the system, and the real
+world component, which is call the semantics of the system.  And then
+we have to define a function that takes a sentence in the syntax and
+a world situation in the semantics, and produces either true or false.
+This is the meaning (or semantic) function of the framework.
+
+After we do this, another question arises: Can we deduce the truth
+values of some sentences given knowledge of truth values of other
+sentences?  This is a question of deduction.  Knowing that some
+sentences are true an a given situation, can we deduce that some other
+sentence is true in that same sitution?  And can we do this without
+knowing what the situation is?  A very simple (yet powerful) example
+of this is the following:  Say we know that we are in a situation in
+which the sentence ``it is raining'' is true; furthermore we know that
+in all situations the sentence ``If it is raining, then the grass is
+wet'' is true.  Then we should be able to conclude that we are in a
+situation in which the sentence ``the grass is wet'' is true.  And we
+know this entirely from the form of the syntax of the sentences, and
+their meanings with respect to their truth values in situations.  This
+is an example of deduction, and we want the logical system of meaning
+we construct to support such reasoning.
+
+To summarize, a logic (or logical theory of meaning) has three
+components: 1) a syntax that defines the well-formed sentences of the
+language of the logic, 2) a model-theoretic semantics that defines
+what models of real-world situations are appropriate for the logic
+language and how those models make the well-formed sentences true or
+false, and 3) a theory of deduction that gives rules that apply to
+sentences that preserve some aspects of their truth.  We will look
+first at propositional logic and its components, and then at
+first-order logic.
+
+\section{Propositional Logic}
+
+Propositional logic takes simple declarative sentences as basic and
+combines them with sentential operators: ``and'', ``or'', and ``not''
+(and perhaps others).  For example, we might have basic sentences like
+``John is going to the store'', ``It is raining'', and ``It is
+daytime''.  Propositional logic has basic connective words: ``and'',
+``or'', and ``not''.  We can combine the basic sentences to make
+larger sentences using the basic connective words.  For example, we
+could say: ``John is going to the store and it is daytime'', or ``It
+is not raining or it is daytime''.
+
+\subsection{Syntax}
+
+In propositional logic we are interested is the connective
+words, and not particularly in how meaning is given to the basic
+declarative sentences.  So we will simply represent the basic
+sentences by letters: p,q,r,s,....  We construct more complex
+sentences using the connectives to get sentences like: not(p), p or q,
+p or (q and not(p)), etc.
+
+So the syntax of propositional logic is very simple, and can be given
+by the following grammar:
+
+\begin{verbatim}
+Sent --> Conjsent
+Sent --> Sent or Conjsent
+Conjsent --> Primesent
+Conjsent --> Conjsent and Primesent
+Primesent --> Basicsent
+Primesent --> not Primesent
+Basicsent --> Prop_sym
+Basicsent --> ( Sent )
+\end{verbatim}
+
+\subsection{Semantics}
+
+The meaning of a sentence in a world is a truth value: true or false.
+I.e., given a world, each sentence is either true or false in that
+world.  So we will think of a world as assigning to each basic
+sentence a truth value, i.e., true or false.  I.e., a world determines
+a truth assignment to the propositional symbols (which represent the
+basic sentences).  For example for the basic sentences (propositions)
+given above, ``It is raining'' and ``It is daytime'', one world might
+assign ``true'' to the first and ``false'' to the second.  This would
+be the world in which it is a wet night.  A given set of $n$
+propositional symbols can distinguish $2^n$ different worlds, one for
+each truth assignment to that set of propositional symbols.
+
+Given the meanings of the propositional symbols, we want to give
+meanings to the compound sentences, those made up from basics
+propositional symbols using the propositional connectives.  So let P
+be the set of proposition symbols, and $M:P~ \rightarrow
+~\{true,false\}$ be a truth assignment (associated with some possible
+world; i.e., we think of $M$ as representing a possible world.)  We
+can extend $M$ to the set of all sentences, i.e., the compound
+sentences involving the connectives, as follows:
+
+\begin{verbatim}
+M(and(S1,S2)) = true, if M(S1)=true and M(S2)=true,
+              = false, otherwise
+
+M(or(S1,S2)) = true, if M(S1)=true or M(S2)=true, or both
+              = false, otherwise
+
+M(not(S)) = true, if M(S)=false
+          = false, otherwise.
+\end{verbatim}
+
+Given a propositional sentence, we canconsider its truth value in each
+possible world, i.e., for each truth assignment to the propositional
+symbols in the sentence.  For example, consider (not p or q).
+
+\begin{verbatim}
+p     | q     || not p or q
+=======================
+true  | true  || true
+true  | false || false
+false | true  || true
+false | false || true
+\end{verbatim}
+
+Here we have set out all four of the truth assignments (worlds) for
+the basic propositional symbols, p and q, one in each row.  And then
+in the third column, we have entered the corresponding truth value of
+the compound sentence (not p or q) in that world.
+This is known as a truth table for (not p or q), and we can make a
+truth table for any (complex) sentence in the propositional logic.  If
+the sentence has $n$ different propositional variables, its truth
+table will have $n+1$ columns and $2^n$ rows.
+
+A sentence whose truth table has a last column of all {\em true} is
+called a {\bf tautology}.  One whose last column is all {\em false} is
+called a {\bf contradiction}.  A sentence that is a contradiction is
+said to be {\bf unsatisfiable} since no world can satisfy it, i.e.,
+make it true.  For example, (b or not b) is a tautology.  And (p and
+not p) is a contradiction.  Notice that if an arbitrary sentence Q is
+a tautology, then (not (Q)) is a contradiction.
+
+Tautologies are of particular interest.  Say we know that (not (A) or
+B) is a tautology, for some particular sentences A and B.  Say further
+that we don't know everything about our current world, but we do know
+that it makes A true.  Then we also know that our current world,
+whatever it is, makes B true.  (Exercise, why?)  We often write a
+formula of the form (not(A) or B) as $(A \rightarrow B)$, read A
+implies B, or if A then B.  We can extend the logic with this
+implication operator as a new connective.
+
+\subsection{Deduction}
+
+So to be able to reason about what is true in our current world,
+without know everything about the world, it is useful to know the
+tautologies.  Now we can always determine if a sentence is a tautology
+by building its truth table.  But a truth table is exponentially
+large.  Is there a way to determine whether a sentence is a tautology
+without having to construct the entire truth table, just by looking at
+the sentence itself and maybe related sentences?
+
+There are many different ways to tackle this problem.  We will look at
+one particular approach.  First we will consider sentences that have
+identical truth tables; such sentences are called {\bf equivalent},
+indicated by $\Longleftrightarrow$.  There are a number of important
+equivalences; some useful ones are listed here:
+\begin{enumerate}
+\item $A~ \Longleftrightarrow ~not~ not~ A$
+\item $A ~or (B~ and~ C)~ \Longleftrightarrow ~(A~ or~ B)~ and~ (A~ or~ C)$
+\item $not(A~and~B)~\Longleftrightarrow ~not(A)~or~not(B)$
+\item $not(A~ or~ B)~ \Longleftrightarrow ~not(A)~ and~ not(B)$
+\end{enumerate}
+Now given any sentence, we can use these equivalences, iteratively, to
+transform it into an equivalent sentence of the following form
+(called conjuctive normal form): all ``not'' operators are immediately
+over propositional symbols, and no ``or'' is inside the scope of an ``and.
+For example, not(A and (B or not(C))), can be transformed as follows:
+
+$not(A~and~(B~or~not(C))) $ \\
+$\Longleftrightarrow not(A)~or~not(B~or~not(C))$ \\
+$\Longleftrightarrow not(A)~or~(not(B)~and~not(not(C)))$ \\
+$\Longleftrightarrow not(A)~or~(not(B)~and~C)$ \\
+$\Longleftrightarrow (not(A)~or~not(B))~and~(not(A)~or~C)$
+
+We call a propositional symbol or the negation of a propositional
+symbol a ``literal''.  We can see that, for {\em any} sentence, we can
+find an equivalent sentence that is a conjunction of disjunctions of
+literals.  We can think of a sentence in this conjunctive normal form
+as a set of ``clauses'', one clause for each conjunct, and each clause
+consisting of a set of literals.  So for the example above, not(A and
+(B or not(C))) is equivalent to the set of clauses
+$\{\{not(A),not(B)\},\{not(A),not(C)\}\}$.  A set of clauses is true if all
+the clauses are true (corresponding to the conjunctions in the
+conjunctive normal form) and a single clause is true if any one (or
+more) of the literals in it is true (corresponding to the disjunction
+in the equivalent sentence.)  A literal is true in the expected cases:
+if it is a propositional symbol then it is true just in case the
+propositional symbol is true; if it is the not of a propositional
+symbol, then it is true just in case the propositional symbol is
+false.
+
+Now we will present a method (called {\bf resolution}) to determine
+whether a set of clauses is a contradiction, i.e. is unsatisfiable.
+That means that every row of its truth table is false.  Given such a
+method, we can use it to determine whether an arbitrary sentence is a
+tautology, as follows.  We take the formula, put a {\em not} around it,
+convert it to an equivalent sentence in conjunctive normal form (using
+the equivalences above) and then apply resolution, which will tell us
+whether it is a contradiction.  If it is, then the original sentence
+is a tautology.
+
+Note that any clause that has both a literal and its complement is
+satisfied by every truth assignment.  Thus we can delete such a clause
+(a tautology) from any set of clauses without affecting that set's
+unsatisfiability.  From now on we will assume no clause in a clause
+set contains both a literal and its complement.
+
+As mentioned resolution works on clauses.  The idea is, given a set of
+clauses, to choose two from the set that can be resolved, form their
+{\bf resolvant}, which is a new clause, and add the resolvant to the
+original set of clauses.  And continue doing this until the empty
+clause is generated, or until no new clauses can be generated.  If the
+empty clause is generated, then the original set of clauses is a
+contradiction.
+
+So we need to define the ``resolvant'' of two clauses.  Consider two
+distinct clauses, one of which contains a proposition symbol P and the
+other of which contains the literal $not(P)$. These clauses can be
+resolved and the resolvant is all the literals in either of the two
+clauses excluding the literals $P$ and $not(P)$.  For example, the two
+clauses: $\{p,not(q)\}$ and $\{not(p),not(q),r\}$, can be resolved on $p$ in the
+first clause and $not(p)$ in the second, producing the resolvant:
+$\{not(q),r\}$.  Notice that we treat the clauses as sets and thus don't
+have multiple copies of a literal in a clause.
+
+Do a larger example:
+
+\subsubsection{Soundness}
+If we are given a set of clauses that is satisfiable, i.e. for which
+there exists a truth assignment that makes them all true, then if we
+form a resolvant from that set and add it back to the set, that new
+set of clauses is also satisfiable.  This follows because consider the
+truth assignment that makes the entire set of clauses true; it must
+make both the two clauses that we resolved true.  And it must make the
+propositional symbol we resolved on either true or false.  If it makes
+it true, then it makes its negation false.  Then for the clause
+containing the negation to be true, some literal in it other than that
+negation must be true.  That literal is in the resolvant and so the
+resolvant is true.  Alternatively the satisfying truth assignment
+might make the proposition symbol we resolve on false.  If so, then
+some other literal in its clause must be true (since the clause is
+true.)  And that literal will be in the resolvant making the resolvant
+true.  So adding resolvants preserves satisfiability of a set of
+clauses.  If we eventually can get the empty clause, which is
+unsatisfiable, then the original set of clauses must be
+unsatisfiable.  (If you're not clear on why the empty clause must be
+unsatisfiable, you can back up one step, and see that the only way we
+can generate the empty clause through resolution is by resolving 
+two singleton clauses of the form $\{p\}$ and $\{not(p)\}$.  An it's easy to
+see that no truth assignment can make both these clauses true.)
+So this argument shows that our tautology testing procedure is
+{\bf sound}, i.e., if it says a sentence is a tautology, then it is
+indeed a tautology.
+
+\subsubsection{Completeness}
+But we would also like for our procedure to be {\bf complete}, i.e., if
+indeed the original sentence is a tautology, then our procedure will
+indeed tell us so.  It turns out that resolution is indeed complete.
+The proof is not difficult so we will look at it.
+
+Consider an arbitrary sentence.  Let $p1, p2, p3, ..., pn$ be all the
+proposition symbols that appear in it.  Consider the following tree
+built from these symbols:
+
+\begin{verbatim}
+                      []
+                 /            \
+           ~p                       p
+         /     \                  /    \
+     ~q           q           ~q          q
+    /   \        /  \        /   \       /  \
+  ~r     r    ~r    r      ~r     r    ~r    r
+  /\     /\   /\    /\     /\    /\    /\    /\
+ ~s s  ~s s  ~s s  ~s s   ~s s  ~s s  ~s s  ~s s 
+\end{verbatim}
+
+(We note that this tree is {\em not} an execution tree of any kind.
+It is not used for computation in any way.)
+
+Each path from the root to a leaf corresponds to one truth assignment
+to the proposition symbols $\{p,q,r,s\}$, the truth assignment that
+makes all the literal on the path true.
+
+Now consider the following example clauses:
+\begin{enumerate}
+\item $\{p, r\}$
+\item $\{\sim p, r, s\}$
+\item $\{\sim q, \sim r\}$
+\item $\{q, r\}$
+\item $\{\sim p, \sim s\}$
+\item $\{q, \sim r, s\}$
+\item $\{p, q, \sim r\}$
+\end{enumerate}
+
+We can use each clause to eliminate various truth assignments
+represented in the tree as not satisfying the clause (and thus not
+satisfying the set of clauses.)
+
+For each clause, find all paths from the root down to a node such that
+the complement of every literal in the clause is in the path (and this
+is not true for any shorter path.)  Mark all such nodes with an 'X'.
+Do that for every clause in the clause set.  Note that any root to
+leaf path (i.e. truth assignment) that has an X on some node cannot
+satisfy the set of clauses, because it will make the clause that
+generated the X false.  And note conversely that any root-to-leaf path
+that does {\em not} have a node marked with an X will make all the
+clauses true and so is a satisfying truth assignment.  So an
+unsatisfiable set of clauses will have a tree in which every
+root-to-leaf path contains a marked node.  Consider the subtree from
+the root down to the first marked node on each path, i.e., a subtree
+with all its leaves marked and no internal nodes marked.  In this
+tree, there must be a node with both children being leaves.  Let the
+children correspond to not(P) and P for some P.  These child nodes
+were caused to be marked by two clauses, one of which contains not(P)
+and one of which contains P.  These two clauses are resolvable, and
+will produce a new resolvant clause that would cause some ancestor of
+these two nodes to be marked.
+
+These observations show that the resolution closure of a set of
+unsatisfiable clauses must contain the empty clause, the only clause
+that marks the root of the tree.  If it didn't, there would be a
+resolution that could be done, and thus the set wouldn't be closed.
+
+So the reolution strategy for determining unsatisfiability is sound
+and complete.
+
+Resolution is highly explosive, there being many different choices for
+what clauses to resolve and on what literals to resolve them at every
+step.  It turns out that there are a variety of restrictions one can
+place on the order of generating resolvants that reduce the
+combinatorial explosion and yet retain the soundness and completeness
+of the method.  Much research has gone into finding such constraints.
+Another direction for finding efficient deduction strategies has been
+to restrict the form of the allowable clauses in some way.  With a
+restricted set of clause forms, and restricted ways to apply
+resolution, efficient strategies do sometimes exist.
+
+\subsection{Horn Clauses}
+
+In this section we consider clauses of a particular form, called Horn
+clauses.  A clause is a Horn clause if it contains at most one
+positive literal.  So the following are examples of Horn clauses:
+\begin{verbatim}
+{~p,q,~r,~s}
+{~p}
+{s}
+{~p,q}
+{~p,~q,~r,~s}
+{}
+\end{verbatim}
+and the following are {\em not} Horn clauses:
+\begin{verbatim}
+{~p,q,~r,s}
+{s,t}
+{p,~q,~r,~s,u}
+\end{verbatim}
+A Horn clause that does contain a positive literal is called a {\em
+Definite Horn Clause} or just a {\em Definite Clause}.  So the first,
+third and fourth example Horn clauses above are definite clauses.  
+
+Now consider resolution among a set of Horn clauses.  For two clauses
+to resolve, one must contain a positive literal, i.e. one must be a
+definite clause.  Also note that the resolvant of two Horn clauses is
+itself a Horn clause, so Horn clauses are closed under resolution.
+Also note that resolving two definite clauses together can never
+directly produce the empty clause, since one (and exactly one) of the
+positive literals will appear in the resolvant.  One way to do
+resolution with Horn clauses is to start with a nondefinite clause and
+resolve it with a definite clause to generate another nondefinite
+clause.  Then we use that just-generated nondefinite clause and
+resolve it against some definite clause to get a new nondefinite
+clause, and we continue in this way, always using the just-generated
+resolvant as one clause used to generate the next resolvant.  This is
+called a linear strategy.  It turns out that this is also a complete
+strategy for Horn clauses.
+
+Consider the example, where for convenience we put the positive
+literal of definite clauses first:
+\begin{verbatim}
+1. {~p,~r}
+2. {p, ~t}
+3. {p, ~q, ~r, ~s}
+4. {q, ~r}
+5. {r}
+6. {s, ~q}.
+\end{verbatim}
+
+Consider the following resolution tree:
+\begin{verbatim}
+                   1. {~p,~r}
+              w/2. /    \ w/3.               
+              {~t,~r}   {~q,~r,~s}
+                          |w/4.
+                        {~r,~s}
+                          |w/5.
+                         {~s}
+                          |w/6.
+                         {~q}
+                          |w/4.
+                         {~r}
+                          |w/5.
+                          {}
+\end{verbatim}
+This is a tree in which the root is a nondefinite clause and all the
+nodes are labeled with resolvants and each edge is labeled with the
+number of the clause that the parent resolved with to generate the
+child.
+
+Notice that we kept the order of the clauses in generating the
+resolvant and put the negative literals of the definite clause before
+the remaining negative literals of the nondefinite clause (eliminating
+subsequent duplicates.)  And we always chose the first literal in the
+nondefinite clause to resolve on.  This is called SLD resolution for
+Horn clauses, and it turns out to be sound and complete.  (A proof is
+beyond what I want to do here, but can be found in the literature, or
+reconstructed by looking an all possible resolution trees and
+determining that any general resolution sequence that leads to the
+empty clause, can be transformed into one that is in the form here.)
+
+There is another way to write Horn clauses; we can write them as
+implications.  We can define implication (\verb|->|), read
+``implies'', by:
+\begin{verbatim}
+P -> Q == ~P \/ Q
+\end{verbatim}
+and reverse implication
+(\verb|->|), read ``if'', by:
+\begin{verbatim}
+P <- Q == P \/ ~Q
+\end{verbatim}
+Note that the propositional sentence \verb|p <- (q/\r/\s)| is
+logically equivalent to \verb|(p\/~q\/~r\/~s|, and is equivalent to
+the Horn clause:
+\begin{verbatim}
+{p,~q,~r,~s}
+\end{verbatim}
+So definite Horn clauses are implications in which a conjunction of
+positive literals imply a single positive literal.
+
+Explain (and give example) how SLD resolution (not eliminating
+redundant literals) is what Prolog does (for predicates without any
+arguments).  Prolog searches the tree of SLD resolution derivations in
+depth-first order.
+
+\subsubsection{Horn Clauses, Unit Resolution}
+
+Another strategy for resolution with Horn clauses is called unit
+resolution.  In unit resolution every resolution step involves one
+clause that has only one positive literal.
+
+So for example:
+\begin{verbatim}
+0. {~p,~s}
+1. {p,~q,~r}
+2. {p,~s}
+3. {q,~s,~t}
+4. {r}
+5. {s}
+\end{verbatim}
+and the following unit resolutions:
+\begin{verbatim}
+6. 1 and 4 --> {p,~q}
+7. 3 and 5 --> {q,~t}
+8. 2 and 5 --> {p}
+9. 0 and 5 --> {~p}
+10. 8 and 9 --> {}
+\end{verbatim}
+It turns out that unit resolution is complete for Horn clauses.  
+
+We think of the indefinite clause as the Goal: it is (the negation of)
+what we want to prove is logically implied by the truth of all the
+definite clauses.  SLD resolution is called a backward chaining
+strategy and Unit resolution is called a forward chaining strategy.
+If we think of our Horn clauses as implications, we can see why: SLD
+resolution starts from the Goal and reasons backwards using the
+implications in a backward direction, from consequence to antecedent,
+to determine what we have yet to establish in order to establish our
+goal.  In Unit resolution we reason starting from facts we know (the
+unit clauses) and reason forward to derive everything we can conclude,
+eventually hoping to prove the Goal.
+
+\section{First Order Logic (FOL)}
+
+Propositional logic is very limited in what it can represent and
+reason about.  Taking simple declarative sentences as primitive, and
+thus not having the ability to look inside and analyze components of
+simple sentences is very restrictive.  First order logic remedies this
+by allowing primitive declarative sentences to be further decomposed
+into statements about objects and relationships among objects.  For
+(a classic) example, the sentence ``Socrates is a man'' in
+propositional logic is primitive, but in first order logic we can
+further analyze it and say, essentially, that Socrates is a thing in
+the set of things called ``man'', written man(Socrates).  And we can
+analyze the sentence ``All men are mortal'' as saying that if
+something is in the set of men, then it is the set of mortal things,
+written \verb|all(X,man(X) -> mortal(X))|.  The advantage of this is
+that now we can reason about objects and their relationships.  For
+example from these two first-order sentences, we can logically
+conclude that Socrates is mortal, written mortal(Socrates).  In
+propositional logic, this kind of reasoning can not be modeled.
+
+\subsection{Syntax}
+
+The syntax of FOL is:
+\begin{verbatim}
+term_list --> term, term_tail.
+
+term_tail --> [].
+term_tail --> [','], term_tail.
+
+term --> [Atom], {fun_sym(Atom}}, opt_par_term_list.
+term --> [X],{var_sym(X)}.
+
+opt_par_term_list --> [].
+opt_par_term_list --> ['('], term_list, [')'].
+
+atomic_formula --> [Pred], {pred_sym(Pred)}, opt_par_term_list.
+
+formula --> atomic_formula.
+formula --> [not],formula.
+formula --> formula, ['\/'], formula.
+formula --> formula, ['/\'], formula.
+formula --> [for_all],[X],{var_sym(X)},formula.
+formula --> [there_exists],[X],{var_sym(X)},formula.
+formula --> ['('], formula, [')'].
+\end{verbatim}
+
+In this prolog-like representation, we assume that the function
+symbols (used in terms) come from some set of symbols, represented in
+Prolog with the predicate \verb|fun_sym|.  Similarly predicate symbols
+come from some fixed set as do variables, and the variable symbols
+(called variables) and the function symbols are disjoint.
+
+Assuming that the appropriate symbols are in the appropriate sets (and
+variables are symbols starting with upper-case letters), examples of
+terms are:
+\begin{verbatim}
+father(michael)
+sum(1,3)
+sum(5,prod(6,succ(3)))
+\end{verbatim}
+Examples of atomic formulas are:
+\begin{verbatim}
+man(socrates)
+mortal(socrates)
+employee(john,deere,93,124000,'101 Elm Street','Stony Brook','NY',11794)
+loves(X,madonna)
+\end{verbatim}
+Examples formulas are:
+\begin{verbatim}
+mortal(socrates)
+man(socrates) /\ mortal(socrates)
+for_all X (not(man(X)) \/ mortal(X))
+\end{verbatim}
+
+We can define various syntactic properties of formulas that come in
+handy.  
+
+A variable occurrence is {\em free} in a formula if it does not appear
+in the scope of a quantifier binding that same variable.  It is {\em
+bound} otherwise.
+
+A formula is {\em closed} if it contains no free occurrence of any
+variable.  It is {\em open} otherwise.
+
+\subsection{Semantics}
+
+The semantics of FOL is given using FOL structures (sometimes called
+models.)  A structure provides a meaning for each function symbol and
+predicate symbol in the language.  Each function symbol and predicate
+symbol comes with an ``arity'', a natural number that corresponds to
+the number of terms that follow them in a parenthesized list in the
+syntax.  (We assume, for simplicity now, each symbol has a fixed arity
+and appears only in the context of that many following terms.)  A
+structure comes with a domain of objects, say D.  A structure gives an
+n-ary function on D as the meaning of a function symbol of arity n.  A
+0-ary function symbol is called a constant and appears without any
+following parenthesized list.  For example, ``socrates'' is a
+constant.  So in particular, a structure assigns a constant to an
+element of D.  A structure gives an n-ary relation on D as the meaning
+of a predicate symbol of arity n.
+
+We use structures to give meaning to first-order formulas.  But
+first-order formulas contain variables, and we need a way to give
+meanings to variables.  We do this with a ``variable assignment'', which
+is an assumption of what values the variables take on.  A variable
+assignment is a function from variables into the domain D of objects
+of the structure, i.e., \verb|VA:Vars->D|.  Now given a structure and a
+variable assigment VA, we can assign meanings to formulas of FOL.
+
+We'll write a simple Prolog specification to show how meaning is defined.
+A model M determines a domain, a function mapping and a predicate
+mapping.  We represent that as the following Prolog facts:
+\begin{verbatim}
+%% given by the model
+model_domain(Obj).                       % for every object Obj in the domain
+model(FunctionSym,ArgList,Obj).          % to define every function symbol
+model(PredicateSym,ArgList,TruthValue).  % to define every predicate symbol
+\end{verbatim}
+So for example, for a model of arithmetic, we would have facts like:
+\verb|model_domain(0)|, \verb|model_domain(1)|,
+\verb|model_domain(2)|,  and so on for the domain elements.  For
+functions we would have \verb|model(+,[0,0],0)|,
+\verb|model(+,[1,0],1)|, \verb|model(+,[1,1],2)| and so on.  For the
+less-than predicate symbol, we would have \verb|model(<,[0,0],false)|,
+\verb|model(<,[0,1],true)|, \verb|model(<,[1,0],false)|, and so on.
+Of course, these sets are infinite, so we cannot actually write them
+down as Prolog programs.  But the Prolog specification should be
+clear; it's just that there would be infinitely many answers to some
+queries.
+
+Consider constant symbols in our arithmetic language.  Let's say that
+we use boolean notation. So our model must also give a
+meaning to these 0-ary function symbols making up boolean
+representation of numbers.  That would be
+done with the facts such as: \verb|model('11',[],3)| and
+\verb|model('101',[],5)|.  We would also have the facts
+\verb|model('0',[],0)| and \verb|model('1',[],1)| and it is important to
+note that the first entry in these facts is a symbol, often called a
+numeral, here a sequence of the 0 and 1 symbols.  The last element in
+these facts is a number, the abstract concept regardless of what
+notation we use to refer to it.
+
+Now given that representation of a model, we can define the concept of
+the meaning of a formula in a model under a variable assignment.  We
+will assume that a variable assignment is represented as a list of
+Var=Obj records.  First we have to define the meaning of a term in a
+model under a variable assignment.  Such a meaning will be an object
+in the model.  The definition is as follows:
+\begin{verbatim}
+%% meaning of a term in a model under a variable assignment
+term_means(Term,VA,Obj) :- 
+   var_sym(Term), 
+   member(Term=Obj,VA).
+term_means(Term,VA,Obj) :- 
+   Term =.. [FunSym|Arguments], % e.g. f(a,X,g(b)) =.. [f,a,X,g(b)] 
+   term_means_list(Arguments,VA,Objs),
+   model(FunSym,[Objs],Obj).
+
+%% meaning of a list of terms
+term_means_list([],_,[]).
+term_means_list([Term|Terms],VA,[Obj|Objs]) :-
+    term_means(Term,VA,Obj),
+    term_means_list(Terms,VA,Objs).
+\end{verbatim}
+So the meaning of a term is found by using the model to get the
+meaning of constant symbols, using the variable assignment to get the
+meanings of variables, and using the model's function definitions to
+find the result of applying a function to its arguments.
+
+Then given the meaning of terms, we can define the meaning of a
+formula in a model under a truth assignment as follows:
+\begin{verbatim}
+%% meaning of a formula in a model under a variable assignment
+formula_means(AFmla,VA,TVal) :-   % atomic formula
+    Fmla =.. [PredSym|Args],      % e.g. psym(a,X,g(b)) =.. [psym,a,X,g(b)]
+    term_means_list(Args,VA,Objs),
+    model(PredSym,Objs,TVal).
+formula_means(A /\ B,VA,TVal) :-
+    formula_means(A,VA,TVal1),
+    formula_means(B,VA,TVal2),
+    /\(TVal1,TVal2,TVal).
+formula_means(not(A),VA,TVal) :-
+    formula_means(A,VA,TVal1),
+    not(TVal1,TVal).
+formula_means(exists(V,Fmla),VA,TVal) :-
+    (model_domain(Obj),                   % try any domain object
+     replace_assignment(V=Obj,VA,NewVA),  % for this variable
+     formula_means(Fmla,NewvA,true)       % and if it makes subformula true
+     ->	TVal = true
+     ;  TVal = false
+    ).
+
+%% replace a single assignment with another
+replace_assignment(V=Obj,VA,NewVA) :-
+    append(Prefix,[V=_|Suffix],VA),
+    append(Prefix,[V=Obj|Suffix],NewVA).
+
+%% and truth table
+/\(true,true,true).
+/\(true,false,false).
+/\(false,true,false).
+/\(false,false,false).
+
+%% or truth table
+not(true,false).
+not(false,true).
+\end{verbatim}
+To find the meaning of an atomic formula, we find the meanings of its
+arguments using the term meaning function, and then use the model to
+see whether that tuple of objects is in the relation that the model
+associates with that predicate symbol.  The meaning of {\em and}
+formulas is clear.  The meaning of an exists formula is true if we can
+find some domain object in the model, that when we assign it to the
+correspoding variable in a new variable assignment (leaving all other
+individual assignments the same), that variable assignment makes the
+subformula true.
+
+(Do some examples.)
+
+Properties of FOL formulas:
+
+Two FOL formulas are {\em logically equivalent} if in every structure
+and for every variable assignment, they have the same meaning.
+
+The meaning of a closed formula (one with no free variables) is
+independent of the variable assignment.  We normally work with closed
+formulas, sometimes called sentences.
+
+FOL equivalences (or definitions):
+\begin{verbatim}
+   not(forall(X,Fmla)) == exists(X,not(Fmla))
+   not(exists(X,Fmla)) == forall(X,not(Fmla))
+   forall(X,Fmla1) /\ forall(X,Fmla2) == forall(X,Fmla1/\Fmla2)
+   if X is not free in Fmla2 then
+      forall(X,Fmla1) \/ Fmla2 == forall(X,Fmla1\/Fmla2)  
+   exists(X,Fmla1) \/ forall(X,Fmla2) == exists(X,Fmla1\/Fmla2)
+   if X is not free in Fmla2 then
+      exists(X,Fmla1) /\ Fmla2 == exists(X,Fmla1/\Fmla2)  
+\end{verbatim}
+
+Given a quantified formula such as \verb|forall(X,Fmla)|, we can choose a new
+variable not appearing in \verb|Fmla|, say \verb|Y|, and replace every free
+occurrence of \verb|X| in \verb|Fmla| with \verb|Y| getting \verb/Fmla|X<-Y/, and then
+\verb/forall(Y,Fmla|X<-Y)/ is logically equvalent to \verb|forall(X,Fmla)|.
+
+\subsection{Deduction}
+
+We will again use resolution for our deduction method.  Recall that
+reslution works on formulas in clausal form.  In FOL we will call an
+atomic formula or a negation of an atomic formula a literal.  And
+again a clause will be a set of literals.  Now a set of clauses is
+true if they are true under all variable assignments.  A single clause is
+true under a variable assignment if some literal in it is true under
+that variable assignment.  This definition allows us to think of
+the variables in clauses as being universally quantified.
+
+So we would like to find, given an arbitrary FOL formula, an
+equivalent clausal form.  This turns out not to be possible, but we
+can find a clausal form that is satisfiable just in case the original
+formula is satisfiable, and that is sufficient for our purpose of
+deduction.
+
+So given an arbitrary FOL formula, we first find a form in prenex
+normal form (PNF), meaning all the quantifiers have outermost scope, and
+the nonquantifier ``matrix'' is in conjunctive normal form.  For
+example the formula:
+\begin{verbatim}
+forall(X,exists(Y,p(X) /\ (not(q(X) \/ r(X,Y)))))
+\end{verbatim}
+is in PNF.  Now given any FOL formula, we can find an equivalent one
+in PNF.  First we ``standardize the variables apart'', which means
+that we change bound variables to ensure that no two distinct
+quantifiers in the formula bind the same variable.  This can always be
+done by choosing new variables and changing one of the bound variables
+to the new variable (including all free occurrences in the scope of
+that binding quantifier).  Then we can first push all negations over quantifiers,
+using the equivalences above, and over ``and'' and ``or'' using
+DeMorgans laws (as for propositional logic), eliminating double
+negations as necessary.  Next we have to pull quantifiers out of
+conjunctions and disjunctions.  Given a formula of the form: 
+\verb|(P /\ exists(X,Q))|, we can transform it to 
+\verb|exists(X,P /\ Q)|, since X does
+not appear in P (since all variables are standardized apart.)  And
+similarly we can move all quantifiers out over ``and'' and ``or''.  So
+for any FOL formula, we can find an equivalent formula in PNF.
+
+For example, consider the formula for ``every man loves a woman'': \\
+\verb|forall(X,man(X)->exists(Y,woman(Y)/\loves(X,Y)))|. We can find the
+following chain of equivalences:
+\begin{verbatim}
+forall(X,man(X)->exists(Y,woman(Y)/\loves(X,Y)))
+==> forall(X,not(man(X))\/exists(Y,woman(Y)/\loves(X,Y)))
+==> forall(X,exists(Y,not(man(X)) \/ (woman(Y)/\loves(X,Y))))
+==> forall(X,exists(Y,(not(man(X))\/woman(Y)) /\ (not(man(X))\/loves(X,Y))))
+\end{verbatim}
+and the final formula is in PNF.
+
+Now if the formula in PNF has only universal quantifiers, then we are
+done.  The ``matrix'' of the prenex formula directly provides the set
+of clauses, since the assumption on the meaning of variables in a set
+of clauses is that they are universally quantified over the entire
+set.  But what happens if we have existential quantifiers in the
+quantified prefix, as in the above example?
+
+Here, we are not able to find a logically equivalent formula, in
+general.  However we can find another formula that will be satisfiable
+if and only if the PNF formula is satisfiable.  And for use in resolution
+theorem proving that is just what we need.
+
+So consider the PNF formula we have:
+\begin{verbatim}
+forall(X,exists(Y,(not(man(X))\/woman(Y)) /\ (not(man(X))\/loves(X,Y))))
+\end{verbatim}
+which says, ``for every X there is a Y such that some property
+holds,'' in this case that Y is a woman that the man X loves.  So
+let's consider a function ``lovee'' that for every man chooses a woman
+that he loves.  So perhaps lovee(john)=mary where ``john loves mary''.
+Now consider the formula:
+\begin{verbatim}
+forall(X,(not(man(X))\/woman(lovee(X))) /\ (not(man(X))\/loves(X,lovee(X)))))
+\end{verbatim}
+We have eliminated the existential quantifier on Y, and replaced every
+occurrence of Y in the quantified formula with ``lovee(X)''.  The
+claim is: there is a structure that satisfies the first formula if and
+only if there is a structure that satisfies the second.  Consider the
+``if'' direction and assume that there is a structure satisfying the
+second formula.  Then that structure will satisfy the first formula,
+since the witness for the truth of the exists subformula is given by
+looking at where the ``lovee'' function takes the object that the
+variable assignment assigns to X.  Since ``lovee'' is a function,
+there will always be such an object, and the second formula ensures
+that the subformula will be true using that object.  Now for the
+``only if'' direction, the truth of the first formula guarantees that
+there is a total function that takes any X to some Y satisfying the
+subformula.  So there is a function, which can be assigned to the
+``lovee'' function symbol in a new structure that will cause the
+second formula to be satisfied.  
+
+This is an example of a general transformation, called
+``Skolemization''.  For any formula in PNF with an existential
+quantifier in the prefix, we can eliminate the outermost existential
+quantifier by introducing a new ``Skolem'' function symbol, with arity
+equal to the number of universal quantifiers that include the
+existential formula in their scope (i.e. to the left of the
+existential.)  We then replace every occurrence of the existentially
+quantified variable  with the term consisting of the new function
+symbol applied to all the enclosing universally quantified variables.
+This gives us another formula that is satisfiable if and only if the
+original one is satisfiable.  By iterating this process, we can
+eliminate all existential quantifiers and find a formula with only
+universal quantifiers.  And that formula can now be used to generate
+the equivalent set of clauses.
+
+For example for our ``every man loves a woman'' formula, the set of
+clauses is:
+\begin{verbatim}
+{(not(man(X)),woman(lovee(X))},
+ {not(man(X)),loves(X,lovee(X))}
+}
+\end{verbatim}
+
+\subsubsection{Resolution in FOL}
+
+Resolution in FOL works with first-order clauses, i.e., sets of
+first-order atom formulas and their negations.  So the clauses contain
+variables.  We can informally think of a clause with variables as
+being shorthand for the whole set of clauses one for each way to
+substitute values for (i.e., instantiate) the variables in the clause
+consistently.  In this way, we can think of the ``real'' clauses as
+actually being variable-free in which case they are just propositional
+clauses, (of course with the complication that there may be infinitely
+many clauses.)  But our intuition should be that when we manipulate
+these first-order clauses, we are intuitively manipulating their
+(infinitely many) ground instantiations, i.e., instances with no
+variables.
+
+So as an example, consider the first-order clauses:
+\begin{verbatim}
+{loves(john,X),~woman(X)}
+{~loves(Y,pat)}
+\end{verbatim}
+Thinking of these as representing their ground instances, we can see
+that the first clause includes the instance
+\verb|{loves(john,pat),~woman(pat)}| (since X can be instantiated
+to \verb|pat|, and the second clause includes the instance
+\verb|{~loves(john,pat)}| since Y can be instantiated to \verb|john|.
+These (instantiated) clauses contain complementary literals and so we
+can resolve them (as propositional clauses) to obtain a new clause:
+\verb|{~woman(pat)}|.  And note that this fact does indeed follow from the
+two first-order clauses.
+
+Now consider a more complicated case:
+\begin{verbatim}
+{loves(Z,X),likes(Z,X)}
+{~loves(Y,pat)}
+\end{verbatim}
+Now the first clause has an instance:
+\verb|{loves(Z,pat),likes(Z,pat)}| which stands for many
+ground clauses, one for each value substituted for Z.  And the second
+clause \verb|{~loves(Y,pat)}| stands for many ground clauses, one
+for each value substituted for Y.  Note that for any value, if we
+substitute it for Z in the first and X in the second, we get two
+resolvable clauses, and their resolvants are all the clauses we can
+get by substituting something for Z in \verb|{likes(Z,pat)}|.  And
+note that we can find this clause directly by matching loves(Y,pat)
+of the second clause with loves(Z,X) of the first, to find the minimal
+instantiations necessary to make them the same.  Then we can apply
+those instantiations to all the literals in both clauses.  Then these
+clauses can resolve directly generating a new first-order clause
+representing all the ground resolvants.  This is the idea behind
+first-order resolution.
+
+There a a few things we must be careful about.  The matching operation
+is called unification, and given two atomic formulas, it finds a most
+general term that is an instance of both formulas.  This term is
+called a most general unifier (mgu).  It turns out that given two
+terms if an mgu exists, it is unique.   
+
+There are several algorithms for finding the mgu.  One approach is to
+work with a set of pairs of terms, which we try to unify.  If all
+pairs are identical, we are done and the terms are unifiable.  If
+there is a pair neither of whose components is a variable and whose
+function symbols are not the same, then we are done and the terms are
+not unifiable.  If one component of some pair is a variable and the
+variable does not occur in the term it is paired with, but does appear
+in some term in some other pair, then replace that variable by its
+paired term in all terms in all other pairs in the set.  (Note that
+this will eliminate all other occurrences of that variable.)  If there
+are two nonvariable terms that are paired and have the same main
+function symbol, then pair all the corresponding arguments of the two
+terms and replace the original pair by that set of pairs.  Repeat
+until done.  The most general unifier is determined by the remaining
+set of pairs.  At least one of each final pair is a variable.
+
+(More precise definition and give several examples)
+
+Examples...
+
+Two clauses are called {\bf variants} of each other if they are
+identical up to renaming of variables.  Notice that the result of
+replacing a clause in a set of clauses by a variant preserves its
+meaning.  
+
+Now we can define the first-order resolvant of two first-order
+clauses.  Two clauses resolve if they contain complementary literals,
+and the atomic formulas of those literals unify (after standardizing
+their variables apart.)  The resolvent is obtained by taking the union
+of the resolved clauses minus the resolved-upon literals and applying
+the mgu substitution to that result.
+
+
+So the resolution refutation algorithm for FOL is now the ``same'' as
+the propositional algorithm.  Close the set of clauses under this
+definition of resolution.  If the closure contains the empty clause,
+then the original set is unsatisfiable.
+
+Example:
+
+Consider the example clauses, which we number for future reference:
+\begin{verbatim}
+1. { ap(n,X,X) }
+2. { ap(c(X,Y),Z,c(X,W)), ~ap(Y,Z,W) }
+3. { ~ap(c(a,c(b,n)),c(d,n),A) }
+\end{verbatim}
+
+Consider the following sequence of resolution steps to determine that
+these clauses are inconsistent.
+\begin{verbatim}
+3. { ~ap(c(a,c(b,n)),c(d,n),A) }
+resolve this with 2 using mgu:
+    X = a, Y = c(b,n), Z = c(d,n), A = c(a,W)
+obtaining:
+4. { ~ap(c(b,n),c(d,n),W) }
+resolve this with 2 again (with all variables primed) using mgu:
+    X' = b, Y' = n, Z' = c(d,n), W = c(b,W')
+obtaining:
+5. { ~ap(n,c(d,n),W') }
+resolve this with 1 using mgu:
+    X = c(d,n), W' = c(d,n)
+obtaining:
+6. { }
+\end{verbatim}
+
+Since we derived the empty clause, these clauses are inconsistent.
+Notice that we can look to see what instantiation of the variable A it
+was that resulted in the inconsistency, by looking at the mgu's
+involved:
+\begin{verbatim}
+A = c(a,W) from the first mgu
+W = c(b,W') from the second, and
+W' = c(d,n) from the last
+yielding
+A = c(a,c(b,c(d,n)))
+\end{verbatim}
+Now note that we can write clauses 1 and 2 in implicational form:
+\begin{verbatim}
+ap(Y,Z,W) -> ap(c(X,Y),Z,c(X,W))
+ap(n,X,X)
+\end{verbatim}
+or in reverse implicational form, and expanding the predicate name of
+{\em ap}:
+\begin{verbatim}
+append(c(X,Y),Z,c(X,W)) :- append(Y,Z,W).
+append(nil,X,X).
+\end{verbatim}
+This is actually the append program, where we are representing the empty 
+list with the constant nil, and using c/2 as the list constructor.
+
+\subsubsection{Horn Clauses, SLD}
+
+The definition of Horn clauses applies to first-order clauses: A
+clause is a Horn clause if it contains at most one positive literal.
+Resolution can be specialized to Horn clauses just as in the
+propositional case, and for Horn clauses we specialize general
+resolution to SLD resolution.  
+
+Examples: 
+
+\subsubsection{Prolog as FO Horn Clauses}
+Prolog is depth-first search through the tree of SLD-resolution
+proofs.
+
+Consider:
+
+\begin{verbatim}
+{anc(X,Y), ~parent(X,Y)}
+{anc(X,Y), ~parent(X,Z), ~anc(Z,Y)}
+{parent(e,t)}
+{parent(t,d)}
+{parent(t,p)}
+{parent(d,h)}
+{parent(h,m)}
+\end{verbatim}
+
+This is the clause version of our old friend, the Prolog program for
+defining ancestor.
+
+Show the SLD tree, and Prolog evaluation.
+
+\subsubsection{Limitations of Prolog/SLD and what can be done}
+
+Prolog has infinite loops, as we've seen.  There are trivial Horn
+clause programs that make perfect sense logically, but put SLD (and
+thus Prolog) into an infinite loop. E.g. p :- p. But maybe more
+importantly 
+\begin{verbatim}
+{anc(X,Y), ~parent(X,Y)}
+{anc(X,Y), ~parent(X,Z), ~anc(Z,Y)}
+\end{verbatim}
+if parent is cyclic.  Or 
+\begin{verbatim}
+{anc(X,Y), ~parent(X,Y)}
+{anc(X,Y), ~anc(X,Z), ~parent(Z,Y)}
+\end{verbatim}
+which logically is just as good as the previous definition.
+
+Other natural examples from the previous chapter are: a) the
+expression grammar and b) the simple English grammar as extended in
+the exercises.  The expression grammar we gave has the wrong
+associativity for the + and * operators; they are normally considered
+to be left associative (e.g., 1+2+3 is considered as (1+2)+3 and not
+1+(2+3)), but the grammar used right-associativity.  Had we used the
+natural grammar for left associative operators, we would have had a
+left-recursive grammar, and Prolog goes into an infinite loop for such
+grammars.  Similarly for the simple English grammer in which we wanted
+to say that a noun phrase is a noun phrase followed by a prepositional
+phrase.  The natural rule to do this, verb|np --> np, pp.|, again
+left-recursive.  So adding prepositional phrases in a way that Prolog
+could handle them required some rather complicated, and perhaps
+non-intuitive, machinations.
+
+
+(Read intro now.)
+
+Let's consider only Datalog programs, which are Horn clauses with only
+constants and variables (i.e., no function symbols of arity greater
+than 0.)
+
+We can define an operator, called the $T_P$ operator, on sets of ground
+atomic formulas as follows:
+
+\begin{verbatim}
+Tp(S) = {H : there is a ground instance, H :- B1,B2,...,Bn, of a rule,
+             and for each Bi, Bi is in S}
+\end{verbatim}
+
+This is one-step of inference: if we assume all the facts of set S are
+true, and the rules are true, then $T_P$(S) is what we can infer to be
+true in one step.  We can infer what is true in any number of steps
+beginning from no assumptions as follows:
+
+\begin{verbatim}
+S_0 = Tp([]).
+S_1 = Tp(S_0).
+S_2 = Tp(S_1).
+...
+S_n = Tp(S_n-1).
+\end{verbatim}
+
+And then we take the union of all the $S_i$.  This will give us all the
+atomic formulas that must be true in every structure that makes all
+the rules true.  This process essentially produces the ``least Model''
+of the program.  For Datalog programs, this process is finite.
+$S_i \subset S_{i+1}$ for every $i$, so the sequence is monotonically
+increasing.  Since there are only finitely many possible ground atomic
+formulas for a finite Datalog program, this sequence must eventually
+reach a fixed point where $S_{k+1} = S_k$.
+
+(Do ancestor example.)
+
+Bottom-up computation starts with the facts and derives new facts
+using the rules.  The idea is that you start assuming that you don't
+know anything: i.e., that all the relations (corresponding to the rule
+heads and facts) are empty.  Then you add tuples to those relations as
+is required by the rules.  The simple example is:
+
+Program:
+\begin{verbatim}
+e(a,b).
+e(a,c).
+e(c,d).
+e(d,f).
+p(X,Y) :- e(X,Y).
+p(X,Y) :- p(X,Z),e(Z,Y).
+\end{verbatim}
+
+So there are two relations (sets of ordered pairs) defined by this
+program: e/2 and p/2.  We start assuming they are empty:
+\begin{verbatim}
+e/2 = { }
+p/2 = { }
+\end{verbatim}
+Now we use the current tuples in e/2 and p/2 (none, at the moment) to
+see if these tuples and the rules and facts force us to add more
+tuples.  Well, the 4 facts for e in the program force us to add those
+pairs to the relation e/2.  So we get
+\begin{verbatim}
+e/2 = {<a,b>,<a,c>,<c,d>,<d,f>}
+p/2 = { }
+\end{verbatim}
+Now we do it again, to see if we need to add more tuples, using these
+current sets.  So since we have \verb|<a,b>| in e/2 and the first p-rule says
+that p(X,Y) if e(X,Y), we must add \verb|<a,b>| to p/2.  And similarly for
+the other pairs in e/2, so now we get:
+\begin{verbatim}
+e/2 = {<a,b>,<a,c>,<c,d>,<d,f>}
+p/2 = {<a,b>,<a,c>,<c,d>,<d,f>}
+\end{verbatim}
+OK, do it again.  Now we have \verb|<a,c>| in p/2 and \verb|<c,d>| in e/2, and the
+second p/2 rule says that p(X,Y) if p(X,Z) and e(Z,Y).  so with
+X=a,Z=c and Y=d, we have to add \verb|<a,d>| to p/2.  And similarly for \verb|<c,d>|
+in p/2 and \verb|<d,f>| in e/2, that same rule requires that we add \verb|<c,f>| to
+p/2.  So at this point we get:
+\begin{verbatim}
+e/2 = {<a,b>,<a,c>,<c,d>,<d,f>}
+p/2 = {<a,b>,<a,c>,<c,d>,<d,f>,<a,d>,<c,f>}
+\end{verbatim}
+And then again: now we have \verb|<a,d>| in p/2 and \verb|<d,f>| in e/2, so the
+second p/2 rule requires that we add \verb|<a,f>| to p/2, and we get:
+\begin{verbatim}
+e/2 = {<a,b>,<a,c>,<c,d>,<d,f>}
+p/2 = {<a,b>,<a,c>,<c,d>,<d,f>,<a,d>,<c,f>,<a,f>}
+\end{verbatim}
+and now we can't get anything new.  We just get pairs we already have,
+so we have hit the fixed point, and are done.
+
+The $T_P$ operator takes a current set of relations for the predicates
+in the program, and uses the rules of the program P and the tuples in
+the set of relations, and generates a new set of relations.  It does
+this the way we did in each step above: Look for instantiated rules
+where we have facts for all the atomic formulas on the right-hand side
+of a rule, and then add the left-hand side.  So for example, what we
+did above, in terms of the $T_P$ operator:
+
+\begin{verbatim}
+Tp(e/2={ },p/2={ })  =  T1  =  (e/2= {<a,b>,<a,c>,<c,d>,<d,f>}, p/2={ })
+Tp(T1)  =  T2  =  (e/2= {<a,b>,<a,c>,<c,d>,<d,f>}, 
+                   p/2= {<a,b>,<a,c>,<c,d>,<d,f>})
+Tp(T2)  =  T3  =  (e/2= {<a,b>,<a,c>,<c,d>,<d,f>}, 
+                   p/2= {<a,b>,<a,c>,<c,d>,<d,f>,<a,d>,<c,f>})
+Tp(T3)  =  T4  =  (e/2= {<a,b>,<a,c>,<c,d>,<d,f>}, 
+                   p/2= {<a,b>,<a,c>,<c,d>,<d,f>,<a,d>,<c,f>,<a,f>})
+Tp(T4)  =  T4
+\end{verbatim}
+and we reached the fixed point.  Notice that we started with the empty
+relations and at each step applied the %T_p% operator to the result of
+the previous step.  This will always generate a non-decreasing
+sequence of sets. If there are only finitely many possible tuples, it
+will always stop at some point, and we will have reached a fixed
+point.
+
+Now if want to determine if a query is implied by a program, find the
+LFP of the program using the $T_P$ operator, and see if the query is in
+the LFP.  So this is another proof technique for Datalog programs.
+(It is directly extensible to all Horn clause programs, but then the
+LFP may be infinite.)
+
+So this shows that for Datalog programs we don't {\em have} to live
+with the infinite loops of Prolog.  There is an alternative.  
+
+But there are problems with the $T_P$ approach: it is not goal-directed.
+E.g., to find my ancestors, we have to find everybody's ancestors.
+That can be a lot of unnecessary work.
+
+We can see a similar (the same) phenonomenon with inductively defined
+functions.  Recall from high school how we defined the factorial
+function, n!
+
+\begin{verbatim}
+0! = 1
+n! = n*(n-1)! if n>0
+\end{verbatim}
+
+There are two ways to think about evaluating, say 5!: We can think
+``bottom-up'': 
+\begin{verbatim}
+0! = 1, 1! = 1*0!=1*1=1, 2! = 2*1!=2*1=2, 
+3! = 3*2!=3*2=6, 4! = 4*3!=4*6=24, 5! = 5*4!=5*24=120.
+\end{verbatim}
+
+Or we can compute it ``top-down'' as a functional programming language
+would by:
+\begin{verbatim}
+5! = 5*4! = 5*(4*3!) = 5*(4*(3*2!)) = 5*(4*(3*(2*1!))) = 5*(4*(3*(2*(1*0!)))) = 
+5*(4*(3*(2*(1*1)))) = 5*(4*(3*(2*1))) = 5*(4*(3*2)) = 5*(4*6) = 5*24 = 120.
+\end{verbatim}
+
+For factorial, these two ways of computing it do essentially the same
+amount of work.  But consider a definition of fibonacci:
+
+\begin{verbatim}
+fib(0) = 1
+fib(1) = 1
+fib(n) = fib(n-1) + fib(n-2) if n>1
+\end{verbatim}
+
+Computing this top-down takes exponential work.  (Do example)
+
+Computing it bottom-up takes linear work. (Do example)
+
+So it seems that bottom-up can be much better than top-down.  But
+consider the definition:
+
+\begin{verbatim}
+lg(1) = 0
+lg(n) = 1 + lg(n//2) if n>1. (where // is integer division)
+\end{verbatim}
+
+Computing this bottom up takes linear work, but computing it top-down
+takes only log work.  So in this case top-down is much better than
+bottom-up.  So it's clear that neither bottom up nor top-down is
+uniformly better than the other.  The question is whether we can come
+up with a single evaluation strategy that gets the best of both
+strategies, for example would be linear on the given definition for
+the fibonacci function and log on the definition of the lg function.
+
+In the case of evaluting Datalog programs, there are two approaches
+(which turn out to be essentially the same approach): Tabling, and
+magic sets.  Tabling modifies Prolog backward chaining evaluation to
+remember goals and answers to avoid rederiving redundant goals.  Magic
+sets modifies the $T_P$ approach to add filtering predicates so that only
+essential goals are derived.
+
+We will look at the Tabling approach.
+

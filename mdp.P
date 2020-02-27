@@ -1,0 +1,64 @@
+:- import for/3 from basics.
+
+u(State,Action,Reward) :-
+	I = 10,
+	u_i(I,State,_Action0,Reward0),
+	iterate(State,10,Reward0,Action,Reward).
+
+iterate(State,I,OldReward,Action,Reward) :-
+	NextI is I+10,
+	u_i(NextI,State,NewAction,NewReward),
+	(NewReward - OldReward < 0.000000000001
+	 ->	Action = NewAction,
+		Reward = NewReward
+	 ;	iterate(State,NextI,NewReward,Action,Reward)
+	).
+
+%u_i(Iteration,State,Action,Reward)
+u_i(1,State,none,Reward) :-
+	r(State,Reward).
+u_i(I,State,Act,Reward) :-
+	I>1,Iminus1 is I-1,
+	argmax_sum_rewards_i(Iminus1,State,SumActRew),
+	SumActRew = argmax(Act,SumRew),
+	g(Disc),
+	r(State,Rew0),
+	Reward is Rew0 + Disc*SumRew.
+
+%argmax_sum_rewards(Iteration,State,argmax(Action,Reward)).
+:- table argmax_sum_rewards_i(_,_,lattice(argmax/3)).
+argmax_sum_rewards_i(I,State,argmax(Action,Reward)) :-
+	sum_rewards_i(I,State,Action,Reward).
+
+%sum_rewards_i(Iteration,State,Action,SumReward)
+:- table sum_rewards_i(_,_,_,fold(sum/3,0.0)).
+sum_rewards_i(I,St0,Act,Rew) :-
+	t(St0,Act,St,Prob),
+	u_i(I,St,_PAct,Rew0),
+	Rew is Prob*Rew0.
+
+sum(X,Y,Z) :- Z is X+Y.
+argmax(X,Y,Z) :-
+	X = argmax(_,R1),
+	Y = argmax(_,R2),
+	(R1 >= R2 -> Z = X ; Z = Y).
+
+%t(Sou,Act,Tar,Prob).
+t(a,a1,a,0.5).
+t(a,a1,b,0.5).
+t(a,a2,c,1.0).
+t(b,b1,a,0.25).
+t(b,b1,b,0.75).
+t(c,c1,c,0.5).
+t(c,c1,b,0.5).
+
+%r(State,Val)
+r(a,12.0).
+r(b,-4.0).
+r(c,2.0).
+
+%g(Discount)
+g(0.9).
+
+
+

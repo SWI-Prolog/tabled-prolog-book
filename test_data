@@ -1,0 +1,270 @@
+/* Tries contain sets of termlists, and provide logtime addition,
+lookup, and deletion (except when internal hashtables need to be
+expanded or reduced.)  A lookup termlist can contain variables, which
+will return the result of unifying the lookup termlist with new
+instances of the termlists stored in the trie.
+
+empty_trie(-Trie): returns an empty trie.
+
+add_to_trie(+TermList,+TrieIn,-TrieOut): adds the TermList as a single
+	entry to TrieIn resulting in TrieOut.
+
+find_in_trie(?TermList,+Trie): Succeeds for TermLists that are in
+	Trie.  ([] is in every trie)
+
+remove_from_trie(+TermList,+TrieIn,-TrieOut): removes the TermList as
+	a single entry from TrieIn resulting in TrieOut.
+
+Tries are ground terms.  They are canonical in that two tries
+containing exactly the same set of term(list)s are identical.  They
+use hash tables for each stage in the trie, which are expanded (and
+reduced) as necessary.  Terms that differ by a single term(list)
+differ only in log subterms (except when internal hash tables are
+extended or retracted.)
+
+So Tries are good candidates for representing sets of terms and
+tabling using intern.
+*/
+:- export empty_trie/1, find_in_trie/2, add_to_trie/3, remove_from_trie/3.
+:- export add_to_trie_ground/3, add_all_to_trie/3, remove_all_from_trie/3.
+
+:- import member/2,append/3,log_ith/3 from basics.
+:- import term_hash/3 from machine.
+
+% return the empty trie.
+empty_trie(ht(2,0,[])).
+
+% unify TermList with new instances of TermLists in Trie
+find_in_trie(TermList,Trie) :-
+	find_in_trie(TermList,Trie,_Vars).
+
+find_in_trie([],_Trie,_Vars).
+find_in_trie([Term|TermList],Trie,Vars) :-
+	find_in_hash(Term,SubTrie,Trie),
+	(atomic(Term)
+	 ->	find_in_trie(TermList,SubTrie,Vars)
+	 ;	Term =.. [_|SubTerms],
+		append(SubTerms,TermList,NewTermList),
+		find_in_trie(NewTermList,SubTrie,Vars)
+	).
+find_in_trie([Term|TermList],Trie,Vars) :-
+	find_in_hash('$VAR'(X),SubTrie,Trie),
+	log_ith(X,Vars,Term),
+	find_in_trie(TermList,SubTrie,Vars).
+
+% add a termlist to Trie0 resulting in Trie
+add_to_trie(TermList,Trie0,Trie) :-
+	(ground(TermList)
+	 ->	add_to_trie_ground(TermList,Trie0,Trie)
+	 ;	copy_term(TermList,TermList1),
+		numbervars(TermList1,0,_),
+		add_to_trie_ground(TermList1,Trie0,Trie)
+	).
+
+% add all termlists to Trie0 resulting in Trie
+add_all_to_trie([],Trie,Trie).
+add_all_to_trie([TermList|TermLists],Trie0,Trie) :-
+	add_to_trie(TermList,Trie0,Trie1),
+	add_all_to_trie(TermLists,Trie1,Trie).
+
+add_to_trie_ground([],Trie,Trie).
+add_to_trie_ground([Term|TermList],Trie0,Trie) :-
+	(atomic(Term)
+	 ->	NTermList = TermList
+	 ; Term @= '$VAR'(_)
+	 ->	NTermList = TermList
+	 ;	Term =.. [_|SubTerms],
+		append(SubTerms,TermList,NTermList)
+	),
+	add_to_hash(Term,NewSubTrie,OldSubTrie,Trie0,Trie1),
+	add_to_trie_ground(NTermList,OldSubTrie,NewSubTrie),
+	Trie1 = ht(HashBits,NumInTab,HashTab),
+	(NumInTab < floor(2**HashBits)
+	 ->	Trie = Trie1
+	 ;	NHashBits is HashBits*2,
+		Trie = ht(NHashBits,NumInTab,NHashTab),
+		rebuild_hash(HashTab,HashBits,NHashBits,NHashTab)
+	).
+
+find_in_hash(Term,Rec,ht(HashBits,_NumInTab,HashTable)) :-
+	(var(Term)
+	 ->	bind_from_hash(Term,Rec,HashBits,HashTable)
+	 ;	Size is floor(2**HashBits) - 1,
+		term_hash(Term,Size,HashCode),
+		(atomic(Term)
+		 ->	Key = Term
+		 ; Term @= '$VAR'(_)
+		 ->	Key = Term
+		 ;	functor(Term,Fun,Ari),
+			Key = Fun/Ari
+		),
+		find_in_hash(Key,Rec,HashCode,HashBits,HashTable)
+	).
+
+find_in_hash(Key,Rec,HashCode,HashBits,HashTable) :-
+	(HashBits =< 0
+	 ->	member(p(Key,Rec),HashTable)
+	 ;	HashTable = n(HashTableL,HashTableR),
+		NHashBits is HashBits - 1,
+		HashBit is HashCode /\ 1,
+		NHashCode is HashCode >> 1,
+		(HashBit =:= 0
+		 ->	find_in_hash(Key,Rec,NHashCode,NHashBits,HashTableL)
+		 ;	find_in_hash(Key,Rec,NHashCode,NHashBits,HashTableR)
+		)
+	).
+
+bind_from_hash(Term,Rec,HashBits,HashTable) :-
+	(HashBits =< 0
+	 ->	member(p(Key,Rec),HashTable),
+		(Key = Fun/Arity
+		 ->	functor(Term,Fun,Arity)
+		 ;	Term = Key
+		)
+	 ;	HashTable = n(HashTableL,HashTableR),
+		NHashBits is HashBits - 1,
+		(bind_from_hash(Term,Rec,NHashBits,HashTableL)
+		 ;
+		 bind_from_hash(Term,Rec,NHashBits,HashTableR)
+		)
+	).
+
+add_to_hash(Term,NewRec,OldRec,HT0,ht(HashBits,NNumInTab,NHashTable)) :-
+	(HT0 == []
+	 ->	HashBits = 2,	% hashtable size starts at 2**2-1
+		NumInTab = 0,
+		HashTable = []
+	 ;	HT0 = ht(HashBits,NumInTab,HashTable)
+	),
+	Size is floor(2**HashBits) - 1,
+	term_hash(Term,Size,HashCode),
+	(atomic(Term)
+	 ->	Key = Term
+	 ; Term @= '$VAR'(_)
+	 ->	Key = Term
+	 ;	functor(Term,Fun,Ari),
+		Key = Fun/Ari
+	),
+	add_to_hash(Key,NewRec,OldRec,HashCode,HashBits,Added,HashTable,NHashTable),
+	NNumInTab is NumInTab+Added.
+
+add_to_hash(Key,NewRec,OldRec,HashCode,HashBits,Added,HashTable,NHashTable) :-
+	(HashBits =< 0
+	 ->	add_to_ordered_list(HashTable,Key,NewRec,OldRec,Added,NHashTable)
+	 ;	(HashTable == []
+		 ->	HashTableL = [], HashTableR = []
+		 ;	HashTable = n(HashTableL,HashTableR)
+		),
+		NHashBits is HashBits - 1,
+		HashBit is HashCode /\ 1,
+		NHashCode is HashCode >> 1,
+		(HashBit =:= 0
+		 ->	NHashTable = n(NHashTableL,HashTableR),
+			add_to_hash(Key,NewRec,OldRec,NHashCode,NHashBits,Added,HashTableL,NHashTableL)
+		 ;	NHashTable = n(HashTableL,NHashTableR),
+			add_to_hash(Key,NewRec,OldRec,NHashCode,NHashBits,Added,HashTableR,NHashTableR)
+		)
+	).
+
+add_to_ordered_list(OValues,Key,NewRec,OldRec,Added,[p(Key,NewRec)]) :-
+	(OValues == []
+	 ->	OldRec = [], Added = 1, NValues = [p(Key,NewRec)]
+	 ;	OValues = [OValue|Values],
+		OValue = p(TKey,TRec),
+		(TKey @< Key
+		 ->	NValues = [OValue|NValues1],
+			add_to_ordered_list(Values,Key,NewRec,OldRec,Added,NValues1)
+		 ;	TKey == Key
+		 ->	NValues = [p(Key,NewRec)|Values],
+			Added = 0,
+			OldRec = TRec
+		 ;	NValues = [p(Key,NewRec)|OValues],
+			Added = 1,
+			OldRec = []
+		)
+	).
+
+%% remove TermList from Trie0 resulting Trie.
+remove_from_trie([],Trie,Trie).
+remove_from_trie([Term|TermList],Trie0,Trie) :-
+	(atomic(Term)
+	 ->	NTermList = TermList
+	 ;	Term =.. [_|SubTerms],
+		append(SubTerms,TermList,NTermList)
+	),
+	add_to_hash(Term,NewSubTrie,OldSubTrie,Trie0,Trie1),
+	remove_from_trie(NTermList,OldSubTrie,NewSubTrie),
+	((NewSubTrie == [] ; NewSubTrie = ht(_,_,[]))
+	 ->	remove_from_hash(Term,_OldRec,Trie0,Trie)
+	 ;	Trie = Trie1
+	).
+
+% remove all termlists from Trie0 resulting in Trie
+remove_all_from_trie([],Trie,Trie).
+remove_all_from_trie([TermList|TermLists],Trie0,Trie) :-
+	remove_from_trie(TermList,Trie0,Trie1),
+	remove_all_from_trie(TermLists,Trie1,Trie).
+
+remove_from_hash(Term,OldRec,ht(HashBits,NumInTab,HashTable),ht(NHashBits,NNumInTab,NHashTable)) :-
+	Size is floor(2**HashBits) - 1,
+	term_hash(Term,Size,HashCode),
+	(atomic(Term)
+	 ->	Key = Term
+	 ;	functor(Term,Fun,Ari),
+		Key = Fun/Ari
+	),
+	NNumInTab is NumInTab - 1,
+	remove_from_hash(Key,OldRec,HashCode,HashBits,HashTable,NHashTable0),
+	MinSize is floor(2** (HashBits//2)) - 1,
+	((NNumInTab > MinSize ; Size =< 3)
+	 ->	NHashTable = NHashTable0,
+		NHashBits = HashBits
+	 ;	NHashBits is HashBits // 2,
+		rebuild_hash(NHashTable0,HashBits,NHashBits,NHashTable)
+	).
+
+remove_from_hash(Key,OldRec,HashCode,HashBits,HashTable,NHashTable) :-
+	(HashBits =< 0
+	 ->	remove_from_ordered_list(HashTable,Key,OldRec,NHashTable)
+	 ;	(HashTable == []
+		 ->	HashTableL = [], HashTableR = []
+		 ;	HashTable = n(HashTableL,HashTableR)
+		),
+		NHashBits is HashBits - 1,
+		HashBit is HashCode /\ 1,
+		NHashCode is HashCode >> 1,
+		(HashBit =:= 0
+		 ->	NHashTable0 = n(NHashTableL,HashTableR),
+			remove_from_hash(Key,OldRec,NHashCode,NHashBits,HashTableL,NHashTableL)
+		 ;	NHashTable0 = n(HashTableL,NHashTableR),
+			remove_from_hash(Key,OldRec,NHashCode,NHashBits,HashTableR,NHashTableR)
+		),
+		(NHashTable0 == n([],[])  % collapse to keep rep canonical
+		 ->	NHashTable = []
+		 ;	NHashTable = NHashTable0
+		)
+	).
+
+remove_from_ordered_list([OValue|OValues],Key,OldRec,NValues) :-
+	(OValue = p(Key,OldRec)
+	 ->	NValues = OValues
+	 ;	NValues = [OValue|NValues1],
+		remove_from_ordered_list(OValues,Key,OldRec,NValues1)
+	).
+
+rebuild_hash(HashTab0,HashBits,NewBitSize,HashTab) :-
+	findall(p(Term,Rec),bind_from_hash(Term,Rec,HashBits,HashTab0),TermRecs),
+	add_all_terms(TermRecs,NewBitSize,[],HashTab).
+
+add_all_terms([],_,HT,HT).
+add_all_terms([p(Term,Rec)|Terms],HashBits,HT0,HT) :-
+	Size is floor(2**HashBits) - 1,
+	term_hash(Term,Size,HashCode),
+	(atomic(Term)
+	 ->	Key = Term
+	 ;	functor(Term,Fun,Arity),
+		Key = Fun/Arity
+	),	 
+	add_to_hash(Key,Rec,[],HashCode,HashBits,_,HT0,HT1),
+	add_all_terms(Terms,HashBits,HT1,HT).
+

@@ -1,0 +1,82 @@
+/* A metainterpreter that does lookahead.  Before it calls a
+subroutine it computes, abducing K extensional DB atoms.  Then it
+checks to see that the abduced facts are true.  If not, it fails.
+Then it abduces K EDB atoms starting as though the about-to-be-called
+predicate succeeded and then passes those K atoms to the called
+subroutine.  Just before the called subroutine returns, it checks to
+see that those abduced facts are true, failing if not, and returning
+successfully if they are.
+*/
+% query: interp(t(0,6),[true]),writeln(yes),fail.
+% query: interp(t(0,6),[true,true]),writeln(yes),fail.
+
+:- import append/3,length/2 from basics.
+:- import get_calls/3, get_returns/2, trie_assert/1 from tables.
+:- op(1050,xfx,(<-)).
+at :- abolish_all_tables.
+pt(G) :- get_calls(G,C,R),writeln(G),get_returns(C,R),tab(2),writeln(G),fail.
+
+% interp(Goal,Follow)
+interp(true,Follow) :- !,is_true(Follow).
+interp((G1,G2),Follow) :- !,
+	abdK(G2,Follow,FollowG1),
+	interpG(G1,FollowG1),
+	interp(G2,Follow).
+interp(G,Follow) :- 
+	interpG(G,Follow).
+
+:- table interpG/2.
+interpG(G,Follow) :-
+	(G <- B),
+	interp(B,Follow),
+	is_true(Follow).
+
+is_true([]).
+is_true([true|Gs]) :- is_true(Gs).
+is_true([G|Gs]) :- (G<-true),is_true(Gs).
+
+
+:- table abdK/3.
+abdK(true,Follow,Follow).
+abdK((G1,G2),Follow,ABD) :- 
+    abdK(G2,Follow,FollowG1),
+    abdK(G1,FollowG1,ABD).    
+abdK(G,Follow,[G|ABD]) :- abducible(G), !,
+    append(ABD,[_],Follow).
+abdK(G,Follow,ABD) :-
+    (G <- Body),
+    abdK(Body,Follow,ABD).
+
+abducible(word(_,_,_)).
+
+t(S0,S) <- s(S0,S1),word(S1,'$',S).
+s(S0,S) <- a(S0,S1),b(S1,S).
+a(S0,S) <- word(S0,a,S1),a(S1,S).
+a(S0,S) <- word(S0,a,S).
+b(S0,S) <- b(S0,S1),word(S1,b,S).
+b(S0,S) <- word(S0,b,S).
+
+/**/
+word(0,a,1) <- true.
+word(1,a,2) <- true.
+word(2,a,3) <- true.
+word(3,a,4) <- true.
+word(4,b,5) <- true.
+word(5,'$',6) <- true.
+/**
+word(0,a,1) <- true.
+word(1,a,2) <- true.
+word(2,a,3) <- true.
+word(3,a,4) <- true.
+word(4,a,5) <- true.
+word(5,a,6) <- true.
+word(6,a,7) <- true.
+word(7,a,8) <- true.
+word(8,a,9) <- true.
+word(9,a,10) <- true.
+word(10,a,11) <- true.
+word(11,a,12) <- true.
+word(12,b,13) <- true.
+word(13,b,14) <- true.
+word(14,'$',15) <- true.
+/**/

@@ -1,0 +1,266 @@
+\chapter{Background and Motivation}
+
+There is a flaw in the very foundations of Logic Programming: Prolog
+is nondeclarative.  Of course, everyone knows that real Prolog as it
+is used is nondeclarative.  Prolog programs abound with cuts, var
+tests, asserts, and all kinds of ugly warts.  Everyone agrees that
+Prolog should be more declarative and much research time has been
+spent, and spent productively, trying to remedy these problems by
+providing more declarative alternatives.  But I believe that there is
+a more serious flaw closer to the heart of Prolog, right at its very
+center, and this flaw has caused a number of problems in logic
+programming.  I'm convinced that we must address this flaw, before we
+can proceed together productively with logic programming.  Of course,
+whether this is a ``flaw'' is in the eye of the beholder; we all have
+arguments over whether a particular behavior is a bug or a feature.
+As is clear from my presentation, I think I've found a bug; some of
+you will think it's a feature.  Wherever we stand on this issue,
+however, I believe we must be clear about its implications.  Only then
+will we be able to communicate effectively about where LP is and where
+it should go.
+
+Let me also mention that I am by no means pointing out something new,
+unknown to the community; rather I'm trying to raise our consciousness
+about an inconsistency and its implications.
+
+The problem is the very semantics of logic programming.  The
+foundational results of our field show that for pure horn clauses, the
+following are equivalent: logical implication, SLD resolution, and the
+least fixpoint of the $T_p$ operator.  And logic programming basically
+``works'' because SLD corresponds to computation (i.e. Prolog) {\em
+and} to logical implication (truth in models).
+
+But there is a fly in the ointment, the dirty secret that we Prolog
+aficionados try to keep in the closet but Prolog programmers are all
+too aware of.  Let's look more carefully at the full SLD tree, the
+foundation for us Prolog hackers.  There are three kinds of paths in
+an SLD tree: 1) those ending in success, 2) those ending in failure,
+and 3) those not ending.  The foundational results tell us that those
+ending in success correspond exactly to those instances of the query
+that logically follow from the program.  This is fine and dandy and
+certainly something we want and need.  But as programmers, that's not
+enough.  We programmers also want, need actually, to distinguish
+between paths that end in failure and paths that don't end at all.
+When we run a program, and it responds `no', we may accept that
+response as a good answer to our query.  But if it goes into an
+infinite loop never coming back with an answer at all, we decide we
+have a bug in our program and set out to fix it.  
+
+So the problem with SLD is not that it doesn't do the right things for
+success, but that it doesn't do the right thing with the other two
+possible outcomes.  Note that this has nothing to do with how we
+search the SLD tree, e.g. unfairly with depth first search or fairly
+with breadth-first search; it's a property of the tree itself.  And it
+has nothing to do with the fact that our theory deals best with ground
+programs and Prolog programs deal with variables.  The problem
+concerns which paths in the SLD tree are finite and which are
+infinite.
+
+In Prolog, as compared with other languages, it seems easier to write
+partially correct programs, programs that, if they halt, they give the
+right answers.  This comes from the power of declarative programming.
+But it seems much harder to write and reason about totally correct
+programs, programs that halt in all (the right) cases.  So it may be
+the case that what we gain from declarativeness in our ability to
+reason about the partial correctness of Prolog programs, we lose in
+the difficulty of reasoning about total correctness.  Theoreticians
+may accept partial correctness as good enough; but we users have to
+know precisely how partial.
+
+And sadly, the problems show up for very simple programs.  The issue
+is clearly seen in transitive closure.  Consider the definition:
+
+\begin{verbatim}
+tca(X,Y) :- a(X,Y).
+tca(X,Y) :- a(X,Z), tca(Z,Y).
+\end{verbatim}
+
+Prolog programmers know that this definition is fine when the
+predicate ``a'' stands for ``parent'', and then ``tca'' is
+``ancestor''.  But what happens if ``a'' is defined by the following
+facts?
+
+\begin{verbatim}
+a(1,1).
+a(2,1).
+\end{verbatim}
+
+Consider what happens when we ask the query: :- tca(1,2).  Prolog (that
+is SLD resolution) goes into an infinite loop.  Are we as programmers
+happy?  Do we say that since it hasn't returned, it must mean that you
+can't get to 2 from 1 in this graph?  Not at all.  We turn back to fix
+the program, probably modifying it by adding a loop-check.  That is,
+we add a list of nodes to the predicate ``tca'', which contains the
+nodes already visited.  Then before continuing to search from a node,
+we check that it has not already been visited.  We're not happy until
+our program responds `no' to our query.  So clearly the semantics of
+our programming language is going to have to account for this.  And it
+does.  We can't depend on the previously referenced foundational
+results to give a semantics for pure Prolog as a programming language,
+where we want to know what both `yes' and `no' answers mean.  The
+theory must somehow be extended.  This was done by Clark who defined
+the completion of a program.  The semantics of (pure) Prolog programs
+is normally taken to be the logical implications of the completion
+(plus some standard axioms such as the unique names axiom.)  To find
+the completion of our tca/2 program, we first convert the two
+implication rules for tca/2 into the equivalent one implication with a
+disjunction in the antecedent, and then we turn the implication into a
+biconditional.  We do a similar transformation for a/2.  Then we take
+the meaning of the program to be the logical implications of these
+biconditionals (including the standard axioms).  And it is the case
+that $\sim tca(1,2)$ is not logically implied by this theory (and
+neither is tca(1,2), of course.)  So the completion semantics correctly
+tells us that SLD will not terminate for this query.  And indeed
+Prolog theoreticians (as well as the programmers) know that tca/2 as
+defined above is NOT a general definition for transitive closure.
+(But note that it {\em is} transitive closure if the graph is acyclic.
+Maybe this is OK, since it is often the case that algorithms for
+constrained data are simpler, but here it could be rather confusing, I
+think.)
+
+But in any case the Prolog community was (mostly) happy with this
+situation, until the database people showed up and asked the obvious
+question: Why doesn't the obvious two-line definition of tca/2 indeed
+mean transitive closure?  (To some of us, it felt somewhat as though
+they were pointing out that the emperor had no clothes.)  They pointed
+out that if one uses the fixed point characterization from the
+original foundation trilogy, instead of the SLD characterization, it
+does.  Indeed, transitive closure is only the beginning; there are
+many advantages in using this semantics.  {\em All} programs without
+function symbols are terminating, and many simple programs now have a
+natural programmers' semantics.  Indeed DCG's now {\em do} mean the
+corresponding context free languages, whereas under the completion
+semantics they don't always.  But even more important is what this
+fixpoint semantics does to the theory of programs.  The theory is much
+simpler, and accords with theory already developed.  E.g., automata
+theory (e.g. CFL's) is now correctly reflected in LP.  And also
+interestingly, this semantics leads the way for a theory of default
+negation, which has blossomed.  This is because if we have a better
+idea of when things are known false, the theory describing such
+negative knowledge is simpler, more interesting, and perhaps even more
+useful.
+
+Actually, the situation for the completion is somewhat worse than
+implied by the transitive closure example.  There are programs for
+which Prolog goes into an infinite loop even though the completion of
+the program determines all goals.  And this is {\em not} because
+Prolog is depth-first; it's because its selection rule is
+left-to-right.  To get Prolog actually to display the behavior
+predicted by the completion, one would have to interleave computations
+of all goal orderings, and fail a goal if any of the interleavings
+failed.  This is hardly an attractive alternative for Prolog
+implementors or programmers.
+
+So I personally think minimal model semantics (i.e., the fixpoint
+semantics) is better than the completion semantics for logic
+programming.  I think the completion semantics is a bug, which should
+be fixed, and it should be fixed by taking the fixpoint semantics.
+There are those who either don't think this is a bug, or don't think
+that this is a reasonable fix.  I certainly accept that the point is
+arguable.  Going to the fixpoint semantics is a big step for at least
+two reasons: 
+
+\begin{itemize}
+\item[Objection 1:] 
+It violates a principle dear to the hearts of some theoretically
+inclined logic programmers, that the meaning of a program consists of
+the logical implications of the theory of the formulas making up the
+program (or a simple transformation of them).
+
+\item[Objection 2:]
+It violates a principle dear to the hearts of some practically
+inclined logic programmers (like me), that a program should have the
+well-known procedural semantics, i.e., be executable by SLD resolution
+(and WAM engines).
+
+\end{itemize} 
+
+The first objection is real and in some sense is not satisfactorily
+solvable, I believe.  We know that there is no first-order theory that
+characterizes transitive closure (the usual Prolog loop-check program
+requires default negation.)  I will discuss some implications of this
+later, and try to claim that things aren't so bad, but I can't say
+they aren't true.  Basically, the purpose of this entire book is to
+claim that the second objection can be overcome.  It is overcome by
+using OLDT resolution in place of SLD resolution in the foundational
+theorems.  OLDT is a resolution strategy very similar to SLD, but one
+that avoids redundant computation by remembering subcomputations and
+reusing their results to respond to later requests.  This remembering
+and reuse has been called memoization, tabling, lemmatization,
+caching, well-formed substring tables, and probably a number of other
+names.  With OLDT instead of SLD, the foundational theorem can be even
+stronger, including a theorem relating OLDT failure leaves and the
+fixpoint definition.
+
+OLDT terminates (i.e., has only success and failure leaf nodes) for
+all queries to programs that have finite minimal models, i.e. that
+have a least fixpoint of finite size.  This guarantees total
+correctness for the transitive closure definition (over finite
+graphs).  Actually, even more can be said: OLDT terminates for all
+queries to programs for which only a finite portion of the minimal
+model is looked at; that is, for all programs with the bounded term
+size property (BTS).  BTS is slightly circular, and undecidable, but
+to me intuitively says that any finitary, constructive definition will
+terminate.  (Admittedly, this is also somewhat circular.)
+
+One thing that happens when we do not have first-order theories to
+explain our semantics, i.e. the first objection above, is that we may
+leave the realm of r.e. sets.  That is, if we did have a first-order
+theory to explain the semantics, then we'd know that a theorem-prover
+could enumerate the theorems and the semantics would be r.e.  However,
+by going to the minimal model semantics, we may (and do, when we add
+negation) get non-r.e. sets.  That is, we leave the realm of the
+computable sets.  This might give pause to someone interested in
+computation, because then we can write programs that aren't in
+principle computable.  Note that this isn't a problem for totally
+correct programs (which will be recursive programs), which are those
+we usually want to write.  I guess that just as we rely on the
+programmer to write programs that are terminating, we must rely on the
+programmer to write programs that are computable.
+
+SLDNF was the obvious (and perhaps only reasonable) extension of SLD
+to include default negation.  If we are to base our new logic
+programming on OLDT, the question arises as to how OLDT should be
+extended to handle negation.  Given the theory of default negation
+developed over the last several years, it seems that the well-founded
+semantics is the appropriate semantics to compute for logic programs
+with unconstrained negation.  (The other possible semantics is the
+partial stable model semantics, but this is NP complete for
+propositional programs, so may be not particularly appropriate for a
+basic computational mechanism.)  For OLDT there have been several
+proposals for computing the well-founded semantics, in particular
+WELL! and XOLDTNF, which are quite similar.  The one I'm proposing
+here is SLG, which I claim is the (or a) right one.  The simplest
+reason that SLG is better than the previous two is that they are
+exponential for general propositional normal programs, whereas SLG is
+polynomial.  Also SLG produces a residual program when there are
+undefined atoms in the well-founded models, and this residual program
+can be further processed to find certain partial stable models.  So in
+many cases SLG could be used as a preprocessor for a partial stable
+model evaluator.
+
+SLG implements the procedural interpretation of Horn clauses, with the
+addition of tabling.  This is a more complex procedural interpretation
+than SLDNF (and the procedural interpretation of negation makes it
+even more complex), but I think it is indeed a procedural
+interpretation and I think it is acceptable.  But this is not enough
+to respond fully to objection 2 above.  The Prolog programmers want to
+know if SLG can be implemented so that it is efficient enough to
+compete with Prolog, (or actually efficient enough to compete with
+C++, perhaps our {\em true} competitor.)  I think the answer is `yes'.
+Actually, even more than that, I think it will be the case that we
+will be able to construct an engine that for many useful problems will
+be significantly faster than Prolog.  And these problems will be in
+what has historically been logic programming's core applications:
+natural language, AI search, and databases.  The examples in this book
+will indicate in detail where some of the problems lie.  There is much
+work to do, but I will claim that results we already have in the XSB
+project indicate that it will definitely be possible.
+
+The approach is to take SLG as the basic computation strategy, and to
+use SLDNF as an optimization.  So when SLDNF can be proved to have the
+same behavior as SLG, then we can use it and get current Prolog
+speeds.  To do this we need an implementation that fully and closely
+integrates SLG and SLD, allowing them to be used interchangably and
+intermixedly.  And that is what SLG resolution supports and its
+implementation in XSB achieves.

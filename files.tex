@@ -1,0 +1,326 @@
+\chapter{Handling Large Fact Files}
+
+\section{Indexing}
+
+When a call is made to a predicate that has multiple clauses in its
+definition, it is important for efficiency for the system to be able
+to quickly determine which defining clauses might match the given
+call.  If it can quickly be determined that many clauses can never
+match the given clause, then much time can be saved that might
+otherwise be spent trying each clause in turn.  This is known as the
+clause indexing problem in Prolog implementations.
+
+As a simple example, consider a predicate, say employee/5, that is
+defined by a large number, say 10000, of ground facts, which might
+come from a table in a relational database.  Then consider a goal:
+\begin{verbatim}
+| ?- employee(15663,LastName,FirstName,Dept,Salary).
+\end{verbatim}
+which asks for the name, department, and salary of employee with ID
+15663.  A naive implementation of Prolog would look at all 10000
+employee facts to determine which one (or ones!) have 15663 in its
+first field.  It would do a unification for each of the 10000 clauses,
+almost all of which fail.  To avoid doing all this work, all Prolog
+implementation support some kind of indexing.  Traditionally Prolog
+implementations build an index on the first argument of every
+predicate.  That means that they build some kind of structure, usually
+a hash table, to allow direct access to clauses given the value of
+their first field.  Then when a call is made with a value (and not a
+variable) for the first field, the hash table is accessed to find what
+clauses might match, and then only for those clauses is full
+unification done.  Of course, if a call is made that has a variable in
+the first argument, then the hash table (i.e., index) for the first
+argument could not be used and all clauses would have to be accessed.
+It is easy to see how this could save immense amounts of time in the
+evaluation of some queries.  Proper indexing is critical for efficient
+XSB query evaluation; it is not at all unusual to be able to speed up
+a query by orders of magnitude by finding the best ways to index
+predicates defined by a large number of clauses.
+
+XSB supports a variety of ways to index clauses.  The ways supported
+differ for predicates whose clauses are compiled (i.e., are stored in
+a .xwam file and then loaded into memory) and predicates that are
+dynamic (i.e., their clauses are created by asserting them directly
+into memory during runtime.)
+
+In XSB compiled predicates can be indexed in only relatively simple
+ways.  One can request only one (or no) index be built; the default is
+on the first argument, but the programmer can choose any other
+argument if desired.  For example, to specify that the compiled
+predicate employee/5 is to be indexed on its second argument, add the
+following directive to the source file containing the facts for
+employee/5:
+\begin{verbatim}
+:- index(employee/5,2).
+\end{verbatim}
+The first argument to the index directive indicates the predicate to
+be indexed, and the second argument indicates the argument to use to
+build the index.  (If the second argument is 0, then no index is
+built.)  The index is built using the main function symbol of each
+occurrence of the chosen argument.  For example, the default indexing
+would be very good for the employee/5 example and query above.  The
+first argument of every employee/5 fact is a constant and the index
+would take advantage of the constant 15663 in the query.  However,
+consider a different situation in which employeeDivID/5 facts had
+employee IDs of the form [DivNo,EmpNo], i.e., a list of two subfields
+indicating the division the employee was hired into and their ID
+number within that division.  In this case all the employeeDivID/5
+facts have the same main functor symbol in their first argument, the
+list functor, so an index would be completely useless in this
+situation, since every first argument main functor symbol would hash
+to the same bucket.  So in this case it would be better to store the
+two subfields of the ID as separate top-level fields in an employee/6
+predicate, and then index on the ID within the division.  This would
+give pretty good indexing, but notice that, since we can only index on
+one argument, we can't take advantage of knowing both the ID and the
+division in a query; the system would have to look through all the
+clauses for employees in different divisions that had the same ID
+number.
+
+Another limitation of indexing of compiled predicates arises because
+we can index on only one argument.  Say we had employee/5 queries
+like:
+\begin{verbatim}
+| ?- employee(15663,LastName,FirstName,Dept,Salary).
+and
+| ?- employee(ID,'Warren',FirstName,Dept,Salary).
+\end{verbatim}
+i.e, both queries for data given the employee's ID, and queries for
+data given the employee's last name.  Since for compiled clauses we
+must choose only one argument for the index, we would have to decide
+which form of query is more important, choose that index, and suffer
+poor performance for queries of the other form.
+
+The more flexible indexing that XSB supports for dynamic predicates,
+those whose clauses are asserted (or dynamically loaded) at runtime,
+provides solutions to these problems.  For dynamic predicates,
+multiple hash-based indexes, joint indexes, and structure sensitive
+indexes are supported.  Alternatively, the programmer can choose to
+index a predicate using a new indexing technique, called
+trie-indexing.
+
+One can specify a joint index of up to three fields.  For example, we
+can create a joint index for (dynamic predicate) employee/6, where the
+first two fields are Division and ID, respectively, with the following
+directive:
+\begin{verbatim}
+| ?- index(employee/6,1+2).
+\end{verbatim}
+In this case an index is built using (the main functor symols of) both
+the first and second fields of employee/6 clauses.  Then if a call to
+employee/6 provides values for both of those fields, then this index
+is used.  Note, however, that if only one of the two fields is
+provided in the call, the index (being a hash-index) cannot be used;
+so such a call will have to look at {\em all} clauses defining
+employee/6.
+
+Indexes for dynamic predicates are built at the time clauses are
+asserted into the predicate.  I.e., the index directive just declares
+that future asserts into the indexed predicate will have the indicated
+index built.  It does {\em not} re-index any clauses currently
+defining the predicate.  This means that one (almost) always declares
+an index for a dynamic predicate when it has no defining clauses,
+before any asserts to that predicate have been done.
+
+In addition to declaring joint indexes, one can declare multiple
+indexes for the same dynamic predicate.  For example, we might want
+two indexes on employee/5, one on the first argument (the ID) {\em
+and} a joint index on the second and third arguments (the last and
+first names).  This could be done with with directive:
+\begin{verbatim}
+| ?- index(employee/5,[1,2+3]).
+\end{verbatim}
+The programmer provides the multiple index specifications in a list.
+So this directive says to build an index on (the main functor symbol
+of) the first argument, and to build a joint index on the second and
+third argument.  Then if a call to employee/5 provides a value for the
+first argument, the first index will be used; if it provides values
+for both the second and third arguments, the second (joint) index will
+be used.  (If it provides values for all three arguments, the first
+index will be used, because it was specified first in the list.)
+
+For dynamic predicates the programmer can also request an argument to
+be indexed using ``star indexing'', in which case the index will be a
+joint index on (up to) the first five symbols of the indicated
+argument.  So, for example, to request a star index the
+employeeDivID/5 on its first argument (which, recall, is a two-element
+list):
+\begin{verbatim}
+| ?- index(employeeDivID/5,*(1)).
+\end{verbatim}
+Now a query such as:
+\begin{verbatim}
+| ?- employeeDivID([3,1433],Last,First,Dept,Sal).
+\end{verbatim}
+would use the star index on the first argument, and use both
+components of the first argument.  Star indexing can be freely
+combined the the default main-functor symbol indexing.  Note that a
+query such as:
+\begin{verbatim}
+| ?- employeeDivID([3,X],Last,First,Dept,Sal).
+\end{verbatim}
+cannot take advantage of the star index at all, since it doesn't have
+values to find a hash value for the joint index.
+
+The programmer can request that a dynamic predicate be trie indexed
+by:
+\begin{verbatim}
+| ?- index(employeeDivID/5,trie).
+\end{verbatim}
+Trie indexing cannot be combined iwth any other indexing and it
+provides a slightly different semantics for clauses defining the
+predicate.  First, only fact-defined predicates can be declared as
+trie-indexed; no rules are allowed as they are for the other indexing
+forms.)  Second, duplicate facts are not supported; i.e., asserting a
+duplicate clause into a trie-indexed predicate is a no-op.  Third, the
+order of facts is {\em not} preserved; i.e., a fact may be added 
+
+
+
+
+
+
+\section{Compiling Fact Files}
+
+(Revise in light of previous (added) section)
+
+Certain applications of XSB require the use of large predicates 
+defined exclusively by ground facts.  These can be thought of as
+``database'' relations.  Predicates defined by a few hundreds of facts
+can simply be compiled and used like all other predicates.  XSB, by
+default, indexes all compiled predicates on the first argument, using
+the main functor symbol.  This means that a call to a predicate which
+is bound on the first argument will quickly select only those facts
+that match on that first argument.  This entirely avoids looking at
+any clause that doesn't match.  This can have a large effect on
+execution times.  For example, assume that p(X,Y) is a predicate
+defined by facts and true of all pairs <X,Y> such that $1 <= X <= 20,
+1 <= Y <= 20$.  Assume it is compiled (using defaults).  Then the
+goal:
+
+\begin{verbatim}
+	| ?- p(1,X),p(X,Y).
+\end{verbatim}
+will make 20 indexed lookups (for the second call to p/2).  The goal
+\begin{verbatim}
+	| ?- p(1,X),p(Y,X).
+\end{verbatim}
+will, for each of the 20 values for X, backtrack through all 400
+tuples to find the 20 that match.  This is because p/2 by default is
+indexed on the first argument, and not the second.  The first query
+is, in this case, about 5 times faster than the second, and this
+performance difference is entirely due to indexing.
+
+XSB allows the user to declare that the index is to be constructed for
+some argument position other than the first.  One can add to the
+program file an index declaration.  For example:
+
+\begin{verbatim}
+:- index p/2-2.
+
+p(1,1).
+p(1,2).
+p(1,3).
+p(1,4).
+...
+\end{verbatim}
+
+When this file is compiled, the first line declares that the p/2
+predicate should be compiled with its index on the second argument.
+Compiled data can be indexed on only one argument (unless a more
+sophisticated indexing strategy is chosen.)
+
+\section{Dynamically Loaded Fact Files}
+
+The above strategy of compiling fact-defined predicates works fine for 
+relations that aren't too large.  For predicates defined by thousands
+of facts, compilation becomes cumbersome (or impossible).  Such
+predicates should be dynamically loaded.  This means that the facts
+defining them are read from a file and asserted into XSB's program
+space.  There are two advantages to dynamically loading a predicate:
+1) handling of much larger files, and 2) more flexible indexing.
+Assume that the file qdata.P contains 10,000 facts defining a
+predicate q(X,Y), true for $1<=X<=100, 1<=Y<=100$.  It could be loaded
+with the following command:
+
+\begin{verbatim}
+	| ?- load_dyn(qdata).
+\end{verbatim}
+
+XSB adds the ``.P'' suffix, and reads the file in, asserting all
+clauses found there.  Asserted clauses are by default indexed on the
+first argument (just as compiled files are.)
+
+Asserted clauses have more powerful indexing capabilities than do
+compiled clauses.  One can ask for them to be indexed on any argument,
+just as compiled clauses.  For dynamic clauses, one uses the
+executable predicate $index/3$.  The first argument is the predicate
+to index; the second is the field argument on which to index, and the
+third is the size of hash table to use.  For example,
+\begin{verbatim}
+	| ?- index(q/2,2,10001).
+
+	yes
+	| ?- load_dyn(qdata).
+	[./qdata.P dynamically loaded, cpu time used: 22.869 seconds]
+
+	yes
+	| ?- 
+\end{verbatim}
+The index command set it so that the predicate $q/2$ would be indexed
+on the second argument, and would use a hash table of size 10,001.
+It's generally a good idea to use a hash table size that is an odd
+number that is near the expected size of the relation.  Then the next
+command, the $load_dyn$, loads in the data file of 10,000 facts, and
+indexes them on the second argument.
+
+It is also possible to put the $index$ command in the file itself, so
+that it will be used when the file is dynamically loaded.  For
+example, in this case the  file woulstart with:
+\begin{verbatim}
+:- index(q/2,2,10001).
+
+q(1,1).
+q(1,2).
+q(1,3).
+...
+\end{verbatim}
+
+Unlike compiled cclauses, asserted clauses can be indexed on more than
+one argument.  To index on the second argument if it is bound on
+call, or on the first argument if the second is not bound and the
+first is, one can use the index command:
+\begin{verbatim}
+:- index(q/2,[2,1],10001).
+\end{verbatim}
+This declares that two indexes should be build on $q/2$, and index on
+the second argument and an index on the first argument.  If the first
+index listed cannot be used (since that argument in a call is not
+bound), then the next index will be used.  Any (reasonable) number of
+indexes may be specified.  (It should be noted that currently an idex
+takes 16 bytes per clause.)
+
+
+
+
+
+Managing large extensional relations
+  load\_dyn, load\_dync, cvt\_canonical.
+  Database interface, heterogeneous databases
+  (defining views to merge DB's)
+
+
+
+\section{Indexing Static Program Clauses}\label{impl-index}
+
+For static (or compiled) user predicates, the compiler accepts a
+directive that performs a variant of $unification factoring$ 
+\cite{DRRSSSW94}.  
+
+....
+
+\section*{Bibliographic Notes}
+
+The idea of using program transformations as a general method to index
+program clauses was presented in a rough form by \cite{HM89}
+\cite{DRRSSSW94}  extented these ideas to factor unifications ...

@@ -1,0 +1,132 @@
+:- table reach/2.
+edge(a,b).
+edge(b,a).
+edge(c,b).
+edge(c,a).
+edge(a,a).
+edge(b,b).
+edge(c,c).
+reach(X,Y) :- edge(X,Y).
+reach(X,Y) :- reach(X,Z), edge(Z,Y).
+
+end_of_file.
+
+
+
+:- table p/0,q/0,r/0,s/0,t/0,u/0.
+p :- r, tnot(t).
+q :- r, tnot(s), tnot(u).
+r :- s.
+r.
+s :- tnot(q), r.
+t.
+
+u :- fail.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bachelor(X) :- \+ married(X), male(X).
+
+male(bill).
+male(jim).
+
+married(bill).
+married(mary).
+
+
+
+
+
+
+
+
+
+
+
+end_of_file.
+bachelor(X) :- \+ married(X), male(X).
+
+
+/***************************************/
+
+:- table reachable/2.
+reachable(X,Y) :- reduce(X,Y).
+%reachable(X,X).
+reachable(X,Y) :- reachable(X,Z), reduce(Z,Y).
+
+reducible(X) :- reachable(X,Y), tnot(reachable(Y,X)).
+
+:- table reducible/1.
+fullyReduce(X,Y) :- reachable(X,Y),tnot(reducible(Y)).
+
+fullyReduceRep(X,Y) :- fullyReduce(X,Y), tnot(smallerequiv(Y)).
+
+:- table smallerequiv/1.
+smallerequiv(X) :- reachable(X,Y), Y@<X, reachable(Y,X).
+
+%cputime(T0),(fullyReduce(1,Y),writeln(Y),fail;true),cputime(T1),Time is T1-T0.
+
+reduce(a,b).
+reduce(b,c).
+reduce(c,d).
+reduce(d,e).
+reduce(e,c).
+reduce(a,f).
+reduce(f,g).
+reduce(g,f).
+reduce(g,k).
+reduce(f,h).
+reduce(h,i).
+reduce(i,h).
+
+/*********
+reduce(I,J) :- I>0,I<64,(J is 2*I ; J is 2*I+1).
+reduce(I,J) :- I>=0,I<128, J is I // 2.
+*******/
+/***************************************/
+:- import get_calls/3, get_returns/2 from tables.
+
+fill_table(X) :- reachable(X,Y),reachable(Y,_),fail.
+
+intab(X) :- get_calls(X,R,C),get_returns(R,C).
+
+tfullyReduce(X,_Y) :- fill_table(X).
+tfullyReduce(X,Y) :- 
+	intab(reachable(X,Y)),
+	\+ (intab(reachable(Y,Z)), \+ intab(reachable(Z,Y))).
+
+
+even(0).
+even(succ(X)) :- \+even(X).
+
+odd(X) :- \+even(X).
+
+funny(X) :- \+odd(X), \+even(X).
+

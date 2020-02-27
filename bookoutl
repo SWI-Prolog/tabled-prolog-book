@@ -1,0 +1,49 @@
+Programming in XSB -- an outline
+
+(Should be organized by kind of application, so someone can turn
+to chapter that describes something like what they want to do.)
+
+
+Intro
+Review of Prolog programming
+  Prolog as nondeterministic procedural language with assign-once 
+	variables 
+
+Datalog programming
+  "pure" deductive database examples
+
+Grammars and parsing
+  CFG's, (Earley recognition)
+  first and follow
+  PTQ example
+
+Dynamic programming
+
+Searching (games? see Bratko)
+
+HiLog programming
+  generic "Higher order programming": map, closure
+  "Object oriented" programming, C-Logic variants
+
+Aggregation and optimization - shortest path
+  annotated logics and approximate reasoning
+
+Metaprogramming -
+  metainterpreters
+  abstract interpretation examples - e.g. prop
+
+Using XSB modules
+
+Managing large extensional relations
+  load_dyn, load_dync, cvt_canonical.
+  Database interface, heterogeneous databases
+  (defining views to merge DB's)
+
+More on indexing
+
+Table builtins - get_calls, get_returns
+
+Extending XSB - foreign language interface
+  calling XSB from C
+
+Compiler options

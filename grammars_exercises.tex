@@ -1,0 +1,101 @@
+\section{Exercises}
+
+\begin{enumerate}
+
+\item (Is this exercise appropriate here?  If I write a chapter on Abstract
+  Interpretation, maybe move there and add an exercise on AI.).
+
+Write a XSB program to parse a simple
+programming procedural language and construct an abstract syntax tree
+for it.  The syntax is taken from the Modula-3 programming language,
+but greatly simplified.
+
+The grammar is following. (The empty string is indicated by e, for
+epsilon; | indicates alternative rules (or), and parentheses indicate
+grouping except when quoted in which case they indicate tokens):
+
+\begin{verbatim}
+module ::= MODULE identifier ; block identifier .
+block ::= declaration_sequence block_body
+block_body ::= END | BEGIN statement_sequence END
+declaration_sequence ::= declaration_sequence declaration | e
+declaration ::= VAR variable_declaration_list ;
+variable_declaration_list ::= variable_declaration 
+         (e | ; variable_declaration_list)
+variable_declaration ::= identifier_list : type
+identifier_list ::= identifier (e | , identifier_list)
+statement_sequence ::= statement statement_sequence | e
+statement ::= assignment_statement ; | if_statement ; |
+              while_statement ; | print_statement ;
+assignment_statement ::= identifier := expression
+if_statement ::= IF expression THEN statement_sequence
+                   ELSE statement_sequence END
+while_statement ::= WHILE expression DO statement_sequence END
+print_statement ::= PRINT '(' expression ')'
+type ::= INT
+expression ::= simple_expression relop simple_expression | simple_expression
+relop ::= < | > | =
+simple_expression ::= simple_expression addop term | term
+addop ::= + | -
+term ::= term mulop primary | primary
+mulop ::= * | /
+primary ::= identifier | integer | '(' simple_expression ')'
+\end{verbatim}
+
+You will be provided a scanner in file scanner.P, which will read
+a source file containing a program, and produce a set of token facts
+that can be processed by your DCG grammar.  The scanner will return
+keywords directly as tokens; identifiers as terms ident(IdentName);
+integers as int(IntegerVal); and special characters as themselves as
+single tokens.  The tokens will be asserted as word/3 facts, and you
+can use your DCG to process them, as indicated in parse\_file/2 below.
+
+Your grammar must recognize all programs according to this grammar
+and, for each recognized program, produce an abstract syntax tree
+(AST) for that program.  The AST must have the following form:
+
+\begin{enumerate}
+
+\item Expressions should have operators as interior nodes (named by the
+operator symbol) and have as children the ASTs for their operands.
+Identifiers should be ident(Identifier) and integers int(Integer).
+
+\item An assignment statement AST should have the form
+assign(Var,ExprAST); an if-then-else statement AST should have the
+form if(ExprAST,ThenStmtAST,ElseStmtAST); a while statement AST should
+have the form while(ExprAST,DoStmtAST); a print statement AST should
+have the form print(ExprAST).
+
+\item A statement sequence AST should be a list of statement ASTs.
+
+\item An identifier list AST should be a list of identifiers.
+
+\item A variable declaration is an IdentifierListAST, as is a variable
+declaration list; as is a declaration; as is a declaration sequence.
+(Since the langauge has only INT variables, type indications are
+unnecessary; we need only the names of the variables.)
+
+\item A block AST is of the form block(IdentifierListAST,StmtListAST).
+
+\item A module AST is of the form module(Name,BlockAST).
+\end{enumerate}
+You should write a predicate parse\_file/2, which takes the name of a
+file containing a program, and if the program is in the language of
+the grammar, returns its Abstract Syntax Tree.
+
+You may import the scanner by putting the scanner.P file in your
+directory and then adding the following declaration to your grammar
+program:
+\begin{verbatim}
+:- import scan_file/2 from scanner.
+\end{verbatim}
+
+Then you can call it with the following code:
+
+\begin{verbatim}
+parse_file(ProgramFile,AST) :-
+    scan_file(ProgramFile,Length),
+    module(AST,0,Length).
+\end{verbatim}
+
+\end{enumerate}

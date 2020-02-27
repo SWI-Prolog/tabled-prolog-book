@@ -1,0 +1,11 @@
+
+
+:- auto_table.
+sent --> conjsent.
+sent --> sent, [or], conjsent.
+conjsent --> negsent.
+conjsent --> conjsent, [and], negsent.
+negsent --> basicsent.
+negsent --> [not], negsent.
+basicsent --> [PropSym], {atom(PropSym),PropSym\==and,PropSym\==or,PropSym\==(not)}.
+basicsent --> ['('], sent, [')'].

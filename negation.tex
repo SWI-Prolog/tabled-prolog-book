@@ -1,0 +1,1273 @@
+\chapter{Negation in XSB}
+
+Negation in the context of logic programming has received significant
+attention.  Prolog implements a negation-as-failure inference rule,
+succeeding the negation of a goal if the goal itself cannot be
+finitely successfully proved.  This implements a kind of closed-world
+assumption, in that a proposition is assumed to be false if it cannot
+be proved to be true.  Recall that with pure Horn clauses, one cannot
+prove a negative fact, since the universally true structure (assigning
+true to all atoms) is always a model of any set of Horn clauses.  The
+closed world assumption allows us to assume facts are false if they
+cannot be proved true.  This is a useful operator, which can be used
+to represent (and program) interesting situations.
+
+Consider a Datalog database, defining a single relation that
+describing the employees of an organization, all defined by simple
+ground facts.  Consider the situation in which we ask a simple query:
+``Is Bill Gates an employee?''  The query processor will answer
+``no''; what does this mean, logically?  It does not mean that it has
+proved that not(employee('Bill Gates')) is true in all models of the
+database.  The database says only that certain facts are true; it says
+nothing about any facts being false.  So a structure in which all the
+given employee facts are true and another fact saying Bill Gates is an
+employee is also true is a structure satifying all the database facts
+and so is a model.  So clearly not(employee('Bill Gates')) is not
+logically implied by the database program.  So the ``no'' answer to
+the initial query means that we cannot prove that Bill Gates is an
+employee; it does not mean that we have proved that Bill Gates is not
+an employee.
+
+Consider a simple example of defining the predicate \verb|bachelor|
+using the predicates \verb|married| and \verb|male|:
+
+\begin{verbatim}
+bachelor(X) :- male(X), \+ married(X).
+
+male(bill).
+male(jim).
+
+married(bill).
+married(mary).
+\end{verbatim}
+
+The rule says that an individual is a bachelor if it is male and it is
+not married. (\verb|\+| is the negation-as-failure operator in
+Prolog.)  The facts indicate who is married and who is male.  We can
+interrogate this program with various queries and we get the following:
+\begin{verbatim}
+| ?- [negation].
+[Compiling ./negation]
+[negation compiled, cpu time used: 0.1 seconds]
+[negation loaded]
+
+yes
+| ?- bachelor(bill).
+
+no
+| ?- bachelor(jim).
+
+yes
+| ?- bachelor(mary).
+
+no
+| ?- bachelor(X).
+
+X = jim;
+
+no
+| ?- 
+\end{verbatim}
+as expected.  The closed-world assumption is applied here: for
+example, when there is no fact that says that jim is married, we
+assume that he is not married.  Also when there is no fact saying that
+mary is male, we assume she is not.
+
+It is important to note that with pure Horn clauses, i.e., simple
+implications with conjunctions of (positive) atomic formulas as
+antecedents and single atomic formulas as consequents, {\em nothing}
+can be proved to be false.  I.e., a set of Horn clauses never
+logically implies the negation of any atomic formula.  Given an
+arbitrary set of Horn clauses, H, and an arbitrary atomic formula,
+A. Consider the structure ST that makes every atomic formula true.  ST
+makes H true and makes A true.  Therefore H does not logically imply
+not(A).  So it is clear that if we are given a Horn clause program, as
+for \verb|married| above, and we ask a negative goal, such as:
+\begin{verbatim}
+| ?- \+ married(jim).
+\end{verbatim}
+a ``yes'' answer does {\em not} mean that the program logically
+implies \verb|not(married(jim))|.  It means that using these rules
+alone, we cannot conclude that married(jim).  
+
+Another way to think about the answers to negative queries to a Horn
+clause program is to think in terms of structures.  We saw that every
+set of Horn clauses has a unique minimal Herbrand model.  That's the
+model constructed by the bottom-up application of the $T_P$ operator.
+Given this unique model, we can answer both positive and negative
+queries: a positive query is true if it is in the least Herbrand
+model; a negative query is true if its subgoal is {\em not} in the
+least Herbrand model.  So we can use the unique minimal model to
+characterize answers to both positive and negative queries to Horn
+programs.
+
+Before we get completely carried away with using negation, we need to
+look at situations in which there are problems.  There are two sources
+of problems: floundering and nonstratification.  Let's first consider
+a floundering query and program.  Say we wrote the bachelor rule as:
+\begin{verbatim}
+bachelor(X) :- \+ married(X), male(X).
+\end{verbatim}
+This looks to be an equivalent definition, since after all, the comma
+is conjunction so the order of literals in the body of a program (as
+simple as this one) shouldn't matter.  But now consider the results of
+the same queries as above when they are submitted to this program:
+\begin{verbatim}
+| ?- bachelor(bill).
+
+no
+| ?- bachelor(jim).
+
+yes
+| ?- bachelor(mary).
+
+no
+| ?- bachelor(X).
+
+no
+| ?- 
+\end{verbatim}
+The answers are fine for the specific queries concerning bill, jim and
+mary, but the general query asking for all bachelors fails, whereas we
+would expect it to generate the answer jim.  The reason is that the
+generated subquery of \verb|\+ married(X)| is able to prove
+\verb|married(X)| is true (for X=bill (and X=mary as well)), and so
+\verb|\+ married(X)| fails.  The problem is that the
+implementation of the operator \verb|\+| only works as we want it to
+when it is applied to an atomic formula containing no variables, i.e.,
+a ground atomic formula.  It is not able to generate bindings for
+variables, but only test whether subgoals succeed or fail.  So to
+guarantee reasonable answers to queries to programs containing
+negation, the negation operator must be allowed to apply only to
+ground literals.  If it is applied to a nonground literal, the program
+is said to {\em flounder}.  Prolog systems in general allow the
+\verb|\+| operator to be applied to nonground literals and so the
+programmer may get unexpected results.  Often another operator,
+\verb|not|, is provided which acts just like \verb|\+| except that it
+gives an error message when applied to a nonground literal. (In XSB
+\verb|not| and \verb|\+| give the same, unsafe, results.)
+
+In fact, when we call the query \verb|\+ married(X)|, with \verb|X| a
+variable, it succeeds if it is not the case that there exists a value
+for X for which \verb|married(X)| succeeds.  So when a negated goal
+contains a variable, the negation has wider scope than the existential
+quantifier which binds the variable.  If there are no variables in the
+subgoal, then there is no quantifier to interfere.
+
+The other problem that may arise in programs with negation, that of
+nonstratification, is a bit more subtle.  While answers to negative
+queries to a purely Horn clause program are completely characterized
+by the program's least model, in our bachelor example, we are using
+negative queries in the definitions of other predicates, not just as
+top-level queries.  Such uses can lead to more complex issues.
+Consider the following rules:
+\begin{verbatim}
+shave(john,john).
+shave(bill,bill).
+shave(barber,X) :- \+ shaves(X,X).
+\end{verbatim}
+This program says that 'John' shaves himself, and 'Bill' shaves
+himself, and that the barber shaves someone if that person does not
+shave himself.  The question is: Who shaves the barber?  This is known
+as the ``Barber paradox'': If the barber does not shave himself, then
+since he shaves all such people, the rule says that he does shave
+himself.  And if he does shave himself, then since he only shaves
+people who don't shave themselves, he doesn't shave himself.
+
+The question of whether the barber shaves himself can be posed in
+Prolog as:
+\begin{verbatim}
+| ?- shave(barber,barber).
+\end{verbatim}
+So what should Prolog answer?  Actually Prolog will go into an
+infinite loop here, which seems reasonable, since either a yes or no
+answer seems incorrect given the argument above.
+
+Consider another example of this kind of phenomenon.  Say we want to
+define a predicate, \verb|normal|, that is true of all reasonable
+sets.  A set is normal if it doesn't contain itself as a member.  (A
+set containing itself is rather weird, when you think about it.  So we
+are using the idea of normality to exclude these weird sets.)  To
+define \verb|normal|, we give the rule:
+\begin{verbatim}
+normal(S) :- \+ in(S,S).
+\end{verbatim}
+where the predicate \verb|in| denotes membership.  Now we want to have
+the constant \verb|n| denote the set of all normal sets.  So \verb|X|
+is in \verb|n| just in case \verb|X| is a normal set.  The following
+rule reflects this:
+\begin{verbatim}
+in(X,n) :- normal(X).
+\end{verbatim}
+Now consider what happens if we ask this program whether \verb|n| is
+itself a normal set: \verb|normal(n)|, which reduces to 
+\verb|\+ in(n,n)|, which reduces to \verb|\+ normal(n)|.  So to show that
+\verb|n| is normal, we have to show that \verb|n| is not normal.  This
+is essentially a simple formalization of Russell's paradox.
+
+Clearly there is something a little odd with these examples.  The
+oddity is that in each case, a predicate, (\verb|normal(n)| or
+\verb|shave(barber,barber)|) is defined in terms of its own negation.
+Normally we consider rules as defining predicates, and this is an odd
+kind of cyclicity which we want to avoid in definitions.  Programs
+that avoid such cycles through negation in their definitions are
+called {\em stratified} programs.  Notice that Prolog would go into an
+infinite loop when asked queries that involve a cycle through
+negation.
+
+So we need to have a better idea of what we want these programs that
+include negation to mean.  That is, we need a semantics for these
+programs.  For positive programs (i.e., Horn clause programs) we have
+a very nice and clean semantics; actually we have several of them, all
+defining the same thing.  A query to a positive program succeeds if 1)
+an instance is logically implied by the program clauses, or 2) if
+there is an SLD resolution proof of it, or 3) if an instance is in the
+least fixed point of the $T_P$ operator for the program.  The question
+is whether we can come up with a simple and clean semantics for
+programs with negative goals in their bodies.
+
+\section{Completion Semantics}
+
+The first approach to a semantics of programs with negative literals
+in their bodies was proposed by Keith Clark \cite{}, and is known as
+Clark's Completion.  The idea here is to use the first idea above for
+the semantics: to use the program to come up with a set of formulas
+which will logically imply the all the appropriate queries, including
+negative ones.  Clearly the implications obtained by treating the
+negation operator as logical negation won't do, since they cannot
+imply any negative goal.  E.g.
+\begin{verbatim}
+forall(X,bachelor(X) <- male(X) /\ not(married(X)))
+
+male(bill).
+male(jim).
+
+married(bill).
+married(mary).
+\end{verbatim}
+do not imply \verb|not(bachelor(mary))|, which according to our
+intuitions we require.  Those formulas cannot imply
+\verb|not(bachelor(mary))| since there is a model of these formulas in
+which bachelor(mary) is true (one in which everyone is a bachelor,
+which satisfies the first rule true.)
+
+So this set of formulas doesn't work, but maybe another one will.
+Since we want to think of the first program rule as {\em defining} the
+relation bachelor, and we usually use ``if and only if'' for
+definitions, we might turn all the ``if''s into ``if and only if''s as
+follows:
+\begin{verbatim}
+forall(X,bachelor(X) <-> (male(X) /\ not(married(X))))
+
+forall(X,male(X) <-> X=bill \/ X=jim)
+
+forall(X,married(X) <-> X=bill \/ X=mary)
+\end{verbatim}
+Its easy to see that for the first rule, we simply made the quantifier
+explicit and turned the ``if'' into an ``iff''.  For the male/1
+predicate, we had to create a single rule for all the facts, creating
+a rule with a single ``if'', and then we changed that ``if'' into
+``iff''.  The intuitive meaning of the second rule that defines the
+relation male/1 is that X is a male if and only if X is either bill or
+jim.
+
+Now this is a set of logical formulas, and we would like the meaning
+of a ground query to be true if this set of formulas (called the
+completion of the program) logically implies the query.  There is one
+more issue we need to handle to make this work.  Given just the
+if-and-only-if rules above, we still cannot prove that bill is not a
+bachelor.  The problem is that it may be that both constants bill and
+jim refer to the same individual in the model.  (Intuitively this
+might be more understandable had I chosen to name the second male as
+james instead of as bill.)  So to be able prove that bill is not
+married, we have to know that \verb|not(bill=jim)|.  So to make the
+completion semantics work, we add additional inequality axioms to say
+that no two constants are equal.  We also need to add inequality
+axioms to say that functions are freely interpreted, i.e., that two
+function applications are equal only if they are the same function
+symbol applied to equal arguments.  
+
+With these additional inequality axioms and the completion of the
+bachelor program, we can prove not(bachelor(bill)) as follows:
+
+From \verb|forall(X,bachelor(X) <-> (male(X) /\ not(married(X))))|, we
+can infer 
+\verb|(bachelor(bill) <-> (male(bill) /\ not(married(bill))))|.  
+And from this and \verb|married(bill)| and
+\verb|not(bill=jim)|, we can infer \verb|not(bachelor(bill))|.  So for
+this program we have succeeded in giving a meaning to programs with
+negation that satisfy our intuitions.
+
+However, there are other programs for which the completion gives
+somewhat unintuitive results.  For example, consider the following
+transitive closure program:
+\begin{verbatim}
+e(a,a).
+e(b,a).
+
+p(X,Y) :- e(X,Y).
+p(X,Y) :- e(X,Z),p(Z,Y).
+\end{verbatim}
+Its completion is (assuming free variables are universally
+quantified):
+\begin{verbatim}
+e(X,Y) <-> (X=a /\ Y=a) \/ (X=b /\ Y=a)
+
+p(X,Y) <-> e(X,Y) \/ exists(X,e(X,Z) /\ p(Z,Y))
+\end{verbatim}
+Here we again put the two standard rules for transitive closure
+together into a single rule and then turned the ``if'' into and
+``iff''.
+
+Now consider the transitive closure of this simple graph; it is
+\{p(a,a), p(b,a)\}, since there are no paths other than the length-one
+paths corresponding to the edges.  So since p(a,b) is actually not in
+the transitive closure, we would like to have the completion of this
+program {\em logically imply} that is {\em not} in the transitive
+closure.  I.e., we would like the completion to imply
+\verb|not(p(a,b))|.  But it doesn't.
+
+Notice that the structure that makes the following atoms true: 
+\begin{verbatim}
+  {e(a,a),e(b,a),p(a,a),p(b,a),p(a,b),p(b,b)}
+\end{verbatim}
+satisfies all the rules.  It clearly satisfies the first rule.  To see
+that is satisfies the second rule, consider all that rule's instances:
+\begin{verbatim}
+1. p(a,a) <-> e(a,a) \/ exists(Z,e(a,Z) /\ p(Z,a))
+2. p(b,a) <-> e(b,a) \/ exists(Z,e(b,Z) /\ p(Z,a))
+3. p(a,b) <-> e(a,b) \/ exists(Z,e(a,Z) /\ p(Z,b))
+4. p(b,b) <-> e(b,b) \/ exists(Z,e(b,Z) /\ p(Z,b))
+\end{verbatim}
+Clearly the first and second instances are true since both sides
+evaluate to true.  Consider the third instance: the left-hand side
+(p(a,b)) is true, e(a,b) is false, but let Z be a, and then we see
+that e(a,a) /\ p(a,b) is true in the structure, so the right-hand side
+is also true, making this entire thrid formula true.  And consider the
+fourth instance: the left-hand side is true, e(b,b) is false, but if
+we take Z to be a, we get (e(b,a) /\ p(a,b)) which is true in the
+structure; so both sides are true and the fourth instance is true as
+well.  So all the instances of the completion of the second rule of
+the program are true, so there exists a model of the completion (this
+one) that makes p(a,b) true.  So clearly the completion does not
+logically imply not(p(a,b)).  So what this means is that under the
+completion semantics our definition of ``transitive closure'' does not
+define real transitive closure.
+
+For this reason, many have concluded that the completion semantics is
+not the desired semantics for logic programs.  It may handle programs
+with negation in a reasonable way, but it goes a step backward for
+positive programs, in particular one as simple as transitive closure.
+
+The problem here can be seen to boil down to rules like:
+\begin{verbatim}
+p :- p.
+\end{verbatim}
+In the least model of this program, p is false.  But the completion of
+this rule: \verb|p <-> p| is a tautology so it does not imply that p
+is false (or that p is true); it imposes no constraint on \verb|p| at
+all.  By looking carefully at our transitive closure example, we can
+see this ``self-supporting'' phenomenon going on, with p(a,b), for
+example.
+
+Recall what we wanted the program completion to do for us for this
+program.  We wanted to construct a set of first-order formulas derived
+from the transitive closure program that would logically imply exactly
+the facts in the transitive closure and the negation of facts not in
+the transitive closure.  It turns out that this is not possible; there
+is {\em no} such set of first-order formulas.  This is a basic theorem
+of first-order logic. \cite{}.
+
+So rather than basing our semantics of logic programs with negation on
+the notion of logical consequence of a first-order theory, let's turn
+to look at a possible least-fixed point characterization.
+
+\section{Negation through Fixed Points}
+
+Let's consider how we might understand the bachelor program using
+least fixed points.  Again, the program:
+\begin{verbatim}
+bachelor(X) :- male(X), \+ married(X).
+
+male(bill).  male(jim).
+
+married(bill).  married(mary).
+\end{verbatim}
+Here we can first compute the least fixed point of the program
+consisting just of the two married facts, which (trivially) contains
+just those two facts.  Now having completing that fixed point, we can
+compute a fixed point for bachelor, which depends on the negation of
+married.  
+
+
+
+
+The paradoxical examples show that definitions of predicates that
+depend on their own negations are problemmatic.  So our first approach
+to providing a semantics for negation in logic programming will
+involve prohibiting such programs.  A program that doesn't include
+cyclic definitions that involve negation is called {\em stratified}.
+
+A Prolog program is {\em Predicate Stratified} if each predicate, P,
+can be assigned an integer (a stratum), S(P), such that for every pair
+of predicates $P_1$ and $P_2$ in rule in the program of the form:
+\begin{verbatim}
+P_1(..) :- ..., P_2(...), ...
+\end{verbatim}
+\verb|S(P_1) >= S(P_2)|, and for every pair of predicates $P_1$ and
+$P_2$ in rule in the program of the form:
+\begin{verbatim}
+P_1(..) :- ..., \+ P_2(...), ...
+\end{verbatim}
+\verb|S(P_1) > S(P_2)|.
+
+For example, consider the bachelor program: 
+\begin{verbatim}
+bachelor(X) :- male(X), \+ married(X).
+
+male(bill).
+male(jim).
+
+married(bill).
+married(mary).
+\end{verbatim}
+This program has three predicates: \verb|bachelor|, \verb|male|, and
+\verb|married|.  We can assign strata as follows:
+\begin{verbatim}
+S(male) = 1
+S(married) = 1
+S(bachelor) = 2
+\end{verbatim}
+and this stratification function satisfies the requirements that come
+from the one rule, i.e., that S(bachelor) \verb|>=| S(male), and
+S(bachelor) \verb|>| S(married).  So this program is said to be
+predicate stratified.  There are many possible stratification
+functions that satisfy the necessary constraints.  We can define a
+``least'' one, in which all the strata are as small (positive)
+integers as possible.  The one given here is least.
+
+Consider the program that defines normal sets:
+\begin{verbatim}
+in(X,n) :- normal(X).
+normal(S) :- \+ in(S,S).
+\end{verbatim}
+For this program S(in) must be \verb|>=| S(normal), because of the
+first rule, and S(normal) must be \verb|>| S(in), because of the
+second rule.  It is clear that this is not possible, so no
+stratification function exists for this program, and the program is
+said to be not predicate stratified, or unstratified, or
+unstratifiable.
+
+There is a simple algorithm for determining whether a stratification
+function exists for a program and finding one if there does.
+The algorithm tries to construct a stratification function but will
+fail if none exists.  The algorithm is as follows: First assign every
+predicate the stratum 1.  Then for every pair of predicates $P_1$ and
+$P_2$ that appear in a rule of the program of the form:
+\begin{verbatim}
+P_1(..) :- ..., \+ P_2(...), ...
+\end{verbatim}
+If $S(P_1)$ \verb|<=| $S(P_2)$, then set $S(P_1)$ to be $S(P_2)+1$.
+Repeat this until no change needs to be made, in which case the final
+$S$ is a stratification (and a least one), or until for some predicate
+P, S(P) \verb|>| $n$, where $n$ is the number of distinct predicates
+in the program, in which case there is no stratification.
+
+Given a stratification for a program, we can define a unique Herbrand
+model for the program bottom-up using the idea the $T_P$ operator.  We
+define the meanings of the predicates in a stratified program in the
+order of their stratification numbers.  First look at all the
+predicates at stratum 1.  None of these depend negatively on any
+predicate, so those rules, denoted by ${P1}$, are a set of Horn
+clauses.  We can construct the least model of these rules, using the
+$T_{P1}$ operator for the stratum 1 program, which generates the set of
+ground atomic formulas, $M_{P1}$, that are logical consequences of
+${P1}$.
+
+Now $M_{P1}$ defines all the predicates at stratum 1.  Now consider all
+predicates at stratum 2, ${P2}$.  They depend on other stratum 2
+predicates and stratum 1 predicates, perhaps negatively on stratum 1
+predicates.  We can now apply the $T_{P2}$ operator iteratively to
+$M_{P1}$ and now interpreting a negative atomic formula %not~A$in the
+body of a rule in ${P2}$ as true iff $A$ is not in $M_{P1}$.  We
+continue in this way through the strata, at each step using the atoms
+computed at an earlier step to interpret the negative literals in the
+bodies of rules.  In this way we can construct in iterated fixed
+point, which will be a model of rules in the program.  This model is
+called the {\em Perfect Model} of the stratified program.
+
+For example:
+\begin{verbatim}
+1. p :- q, \+r, s.
+2. q :- p.
+3. q :- s.
+4. r :- \+s, t.
+5. s.
+\end{verbatim}
+A stratification can be computed as follows:
+\begin{verbatim}
+S(p) = 1
+S(q) = 1
+S(r) = 1
+S(s) = 1
+S(t) = 1
+
+S(p) = 2, by rule 1, and S(r) = 1
+S(q) = 2, by rule 2, and S(p) = 2
+S(r) = 2, by rule 4, and S(s) = 1
+
+S(p) = 3, by rule 1, and S(r) = 2
+S(q) = 3, by rule 2, and S(p) = 3
+\end{verbatim}
+So this program is stratified, and its stratification is:
+\begin{verbatim}
+S(p) = 3
+S(q) = 3
+S(r) = 2
+S(s) = 1
+S(t) = 1
+\end{verbatim}
+With this stratification we can compute the perfect model.
+${P1}$:
+\begin{verbatim}
+5. s.
+\end{verbatim}
+and $M_{P1}$: \verb|{s}|.  Then ${P2}$ is
+\begin{verbatim}
+4. r :- \+s, t.
+\end{verbatim}
+and $M_{P2}$ = \verb|{s}|, since \verb|\+s| is false (since s is in $M_{P1}$)
+and then %P_3% is:
+\begin{verbatim}
+1. p :- q, \+r, s.
+2. q :- p.
+3. q :- s.
+\end{verbatim}
+and $M_{P3}$ is \verb|{s, q, p}|, since s is in $M_{P2}$ and r is not in
+$M_{P2}$. 
+
+There are a few things to note about the perfect model.  It is an
+iterated fixed point, and so is defined by transfinite induction.
+I.e., we may have to iterate to infinity at one stratum before we can
+move to the next stratum.  So this means that the perfect model may
+not be recursively enumerable.  
+
+When a program is predicate stratified, it is generally agreed that
+the perfect model provides the correct semantics for it.  However,
+there are many programs that are not predicate stratified but for
+which Prolog computes what seems to be the correct answers.  Consider
+for example the definition of even natural numbers (represented in
+successor notation):
+\begin{verbatim}
+even(0).
+even(succ(X)) :- \+ even(X).
+\end{verbatim}
+Prolog computes this correctly.  But the program is not predicate
+stratified, since the predicate \verb|even/1| depends on itself
+negatively.  But notice that when it does, its argument is smaller, so
+there actually is no cycle through negation in the definition; the
+definition ``grounds out'' at 0.  Also note that we can transform any
+predicate stratified propositional program into a nonstratified
+(predicate logic) program simply by introducing one unary predicate,
+say, c/1, and then replacing every propositional symbol, P, in the
+original program by c(P).  Clearly the program hasn't changed in any
+fundamental sense, but if the original program had any negation in it
+at all, the transformed program will not be predicate stratified; the
+only predicate is c/1 so it will depend negatively on itself. 
+
+To address these problems, more refined definitions of stratification
+were developed.  In particular the notion of ``local stratification''
+was defined.  The idea of local stratification is to ground the
+program, and then to determine if the (usually infinite) set of ground
+atomic formulas can be placed in strata so that there is no cycle
+through negation.  For example, the even/1 program above is locally
+stratified, since we can assign the stratum 1 to the ground atomic formula
+even(0), and n+1 to the formula even(succ(...succ(0))) with n
+successors.  With this stratification, it's easy to see that any atom
+depends negatively only on atoms with smaller strata.
+
+However, there are disadvantages to local stratification.  For example
+it is undecidable whether a finite predicate logic program is locally
+stratified, which means that were we to use that as the definition of
+a meaningful program, it would undecidable whether a program has
+meaning.
+
+So the search continued for a definition that would give meaning to
+all programs, stratified (in whatever form) or not.
+
+
+[How/whether to include this following...]
+
+As an example of stratified negation, consider the situation in which
+we have a set of terms and a nondeterministic reduction operation over
+them.  Then given a term, we want to reduce it until further
+operations don't simplify it any more.  We will allow there to be
+cycles in the reduction operation and assume that terms that reduce to
+each other are equivalently fully reduced.
+
+This situation can be abstractly modeled by considering the terms to
+be nodes of a directed graph with an edge from N1 to N2 if the term at
+N1 directly reduces to the term at N2.  Now consider the strongly
+connected components (SCCs) of this graph, i.e. two nodes are in the
+same SCC if each can be reached from the other.  We will call an SCC a
+final SCC if the only nodes reachable from nodes in that SCC are
+others in that SCC.  Now given a node, we want to find all nodes
+reachable from that node that are in final SCCs.
+
+So first we define reachable:
+\begin{verbatim}
+:- table reachable/2.
+reachable(X,Y) :- reduce(X,Y).
+reachable(X,Y) :- reachable(X,Z), reduce(Z,Y).
+\end{verbatim}
+Next we can define \verb|reducible| to be true of nodes that can be
+further reduced, i.e., those nodes from which we can reach other nodes
+that cannot reach back:
+\begin{verbatim}
+reducible(X) :- reachable(X,Y), tnot(reachable(Y,X)).
+\end{verbatim}
+\verb|tnot| is the negation operator for tabled goals.  It checks to 
+see that the call doesn't flounder, giving an error message if it
+does.  It can be applied only to a single goal, and that goal must be
+a tabled predicate.  With this predicate we can next define the
+predicate \verb|fullyReduce| that is true of pairs of nodes such that
+the first can be reduced to the second and the second is not further
+reducible:
+\begin{verbatim}
+:- table reducible/1.
+fullyReduce(X,Y) :- reachable(X,Y),tnot(reducible(Y)).
+\end{verbatim}
+Note that we must table \verb|reducible| because \verb|tnot| can only
+be applied to predicates that are tabled.
+
+So with these definitions and the following graph for reduce:
+\begin{verbatim}
+reduce(a,b).
+reduce(b,c).
+reduce(c,d).
+reduce(d,e).
+reduce(e,c).
+reduce(a,f).
+reduce(f,g).
+reduce(g,f).
+reduce(g,k).
+reduce(f,h).
+reduce(h,i).
+reduce(i,h).
+\end{verbatim}
+we can ask queries such as:
+\begin{verbatim}
+| ?- fullyReduce(a,X).
+
+X = c;
+
+X = h;
+
+X = d;
+
+X = k;
+
+X = i;
+
+X = e;
+
+no
+| ?- 
+\end{verbatim}
+which returns all nodes in final SCCs reachable from node \verb|a|.
+
+However, we may now wish to generate just one representative from each
+final SCC, say the smallest.  We can do that with the following
+program:
+\begin{verbatim}
+fullyReduceRep(X,Y) :- fullyReduce(X,Y), tnot(smallerequiv(Y)).
+
+smallerequiv(X) :- reachable(X,Y), Y@<X, reachable(Y,X).
+\end{verbatim}
+
+Now we get:
+\begin{verbatim}
+| ?- fullyReduceRep(a,X).
+
+X = c;
+
+X = h;
+
+X = k;
+
+no
+| ?- 
+\end{verbatim}
+
+Note that this is an example of a stratified program.  The predicate
+\verb|reachable| is in the lowest stratum; then \verb|reducible| is
+defined in terms of the negation of \verb|reachable| so it is in the
+next stratum; then \verb|fullyReduce| is defined in terms of the
+negation of \verb|reducible|, so it is in the third stratum.
+\verb|smallerequiv| is in the first stratum with \verb|reachable|;
+and \verb|fullyReduceRep| is in the same stratum as
+\verb|fullyReduce|.
+
+
+\section{General Negation}
+
+There have been many proposals for a semantics for general logical
+programs, i.e., programs with unrestricted negation.  When considering
+general semantics, there are a few very simple (propositional)
+programs that we can use to show their particular characteristics.
+The programs are the following:
+\begin{verbatim}
+p :- p.
+\end{verbatim}
+This is a simple program in which p depends (only) on itself.  Notice
+that Prolog goes into an infinite loop on this program, and Tabled
+Prolog terminates with p being false.
+
+The second program is a direct negative loop.
+\begin{verbatim}
+p :- \+ p.
+\end{verbatim}
+
+The final program has two propositional symbols, each of which depends
+directly on the other negatively.
+\begin{verbatim}
+p :- \+ q.
+q :- \+ p.
+\end{verbatim}
+
+We will use these programs to help understand (and distinguish) the
+various semantics for general logic programs that we consider in the
+following sections.
+
+\subsection{Clark's Completion Semantics}
+
+Idea is to turn the implications of rules into biconditionals and then
+to treat closed world negation as logical negation. 
+
+So take program:
+Put rules with same head together into one rule (with disjuctive
+bodies).  Add existential quantifiers for variables in the body but
+not the head.
+
+Then turn the if's into iff's.
+
+This is called the completion of the program.
+
+Example:
+
+even(0).
+even(s(X)) :- \verb|\+|even(X).
+
+Completion:
+
+\begin{verbatim}
+even(X) <==> exists(Y, (X = 0 \/ (X=s(Y) /\ not(even(Y)))).
+\end{verbatim}
+
+Also must add ``Clark's Equality Theory'' (CET), to define equality:
+not(a=b) for every pair of constants a and b.  
+f(X1,..,Xn) = g(Y1,..,Yn) iff f=g, and Xi=Yi for all Y.  
+not(X=f(..,T,..)) if X appears in term T.
+
+Then the meaning of a program is the set of logical consequences of
+the completion of the program and CET.
+
+So is even(s(s(0))) a logical consequence of the completion of the
+program and CET?
+
+\begin{verbatim}
+even(s(s(0))) <==> exists(Y,(s(s(0))=0\/(s(s(0))=s(Y)/\not(even(Y)))))
+    <==> not(even(s(0)))
+    <==> not(exists(Y,(s(0)=0\/(s(0)=s(Y)/\not(even(Y))))))
+    <==> not(not(even(0)))
+    <==> not(not(exists(Y,(0=0\/...))))
+    <==> not(not(true))
+    <==> true.
+\end{verbatim}
+
+Yes.  So Clark's completion gives us what we want for the even
+program.
+
+What does it do with:
+\begin{verbatim}
+p :- p.
+\end{verbatim}
+The completion of this program is simply \verb|p<==>p|, which is a
+tautology.  So its logical consequences are just the tautologies, so
+it does not imply either p or not(p).  So from this program we cannot
+conclude that p is true or that p is false.  Notice that this differs
+from the perfect model semantics in which we can conclude from this
+program that p is false.
+
+This does have an interesting effect on the transitive closure
+definition.  Consider the program:
+\begin{verbatim}
+e(a,a).
+e(b,a).
+
+p(X,Y) :- e(X,Y).
+p(X,Y) :- e(X,Z),p(Z,Y).
+\end{verbatim}
+We can ground this program into:
+\begin{verbatim}
+e(a,a).
+e(b,a).
+
+p(a,a) :- e(a,a).
+p(a,b) :- e(a,b).
+p(b,a) :- e(b,a).
+p(b,b) :- e(b,b).
+p(a,a) :- e(a,a),p(a,a).
+p(a,a) :- e(a,b),p(b,a).
+p(a,b) :- e(a,a),p(a,b).
+p(a,b) :- e(a,b),p(b,b).
+p(b,a) :- e(b,a),p(a,a).
+p(b,a) :- e(b,b),p(b,a).
+p(b,b) :- e(b,a),p(a,b).
+p(b,b) :- e(b,b),p(b,b).
+\end{verbatim}
+And now the completion is:
+\begin{verbatim}
+e(X,Y) <==> (X=a,Y=a) ; (X=b,Y=a).
+
+p(a,a) <==> e(a,a) ; (e(a,a),p(a,a)) ; (e(a,b),p(b,a)).
+p(a,b) <==> e(a,b) ; (e(a,a),p(a,b)) ; (e(a,b),p(b,b)).
+p(b,a) <==> e(b,a) ; (e(b,a),p(a,a)) ; (e(b,b),p(b,a)).
+p(b,b) <==> e(b,b) ; (e(b,a),p(a,b)) ; (e(b,b),p(b,b)).
+\end{verbatim}
+Now using the first biconditional in the 2nd and 4th rule, we can
+simplify this to:
+\begin{verbatim}
+e(a,a).
+e(b,a).
+not(e(a,b)).
+not(e(b,b)).
+
+p(a,a).
+p(a,b) <==> p(a,b)
+p(b,a).
+p(b,b) <==> p(a,b)
+\end{verbatim}
+And now note that just as in the positive loop, we cannot prove either
+that p(a,b) is true or that it is false.  So this means that the
+completion semantics does not imply that in this graph, you cannot get
+from a to b.  So this program does not define transitive closure.
+
+So this shows that the completion semantics does not agree with the
+perfect model semantics.  In the perfect model semantics, p(a,b) is
+definitely false.  For this reason, the completion semantics is not
+normally considered a good semantics for logic programs.  People feel
+that the above transitive closure program ought to indeed define
+transitive closure.  And since under the completion semantics, it
+doesn't, the completion semantics is not a good semantics.
+
+It is RE, and it is the logical consequences of some set of formulas...
+
+
+\subsection{Stable Model Semantics}
+
+Another approach to giving semantics to general logic program was
+proposed by Michael Gelfond and Vladimir Lifschitz \cite{hjk} and is
+known as Stable Models.  This approach defines a model for a program
+as a fixed point of a particular operator, the Gelfond-Lifschitz (or
+GL) operator (not surprisingly.)
+
+We will consider propositional programs.  Stable models of predicate
+programs are defined in terms of the (possibly infinite) ground
+instantiation of the program.  A model is represented as a set of
+proposition symbols, the model making all symbols in the set true and
+all those not in the set false.  For any general propositional logic
+program, the GL operator takes a set of propositional symbols and
+returns a set of proposition symbols.  It is defined using a
+transformation of the given program called the GL-reduct of a program.
+Given a program P and a set of proposition symbols S, the GL-reduct of
+P is the program obtained from P by 
+\begin{enumerate}
+\item
+deleting any rule which has a negative literal in its body whose
+proposition symbol is in S, and
+\item
+deleting from the body of any rule any negative literal whose
+proposition symbol is not in S.
+\end{enumerate}
+For example, the GL-reduct of program:
+\begin{verbatim}
+p :- q, \+r, s.
+q :- \+s.
+r := \+q, s.
+\end{verbatim}
+with respect to the set of symbols:
+\begin{verbatim}
+{p, q}
+\end{verbatim}
+is
+\begin{verbatim}
+p :- q, s.
+q.
+\end{verbatim}
+One can think of the GL-reduct of a program with respect to a set S as
+being the program one would get by assuming the propositions in S are
+true when interpreting negative body literals of program rules.
+
+Notice that the GL-reduct of any program with respect to any set S is
+a definite program.  In the process of constructing the GL-reduct we
+delete all negative literals in a program.
+
+Now we can define a Stable Model of a general propositional logic
+program.  A stable model of a program P is a set of proposition
+symbols M such that the least model of the GL-reduct of P with respect
+to M is M.  I.e., it is a fixed point of the operator obtained by
+taking the least model of the GL-reduct.
+
+Proposition: If a program P is predicate stratified, then P has
+exactly one stable model, which is the perfect model.
+
+Examples:  For the program:
+\begin{verbatim}
+p :- p.
+\end{verbatim}
+the only stable model makes \verb|p| false.  This follows from the
+previous proposition, as well as from direct construction.
+
+For the program:
+\begin{verbatim}
+p :- \+p.
+\end{verbatim}
+there are {\em no} stable models.
+
+For the program: 
+\begin{verbatim}
+p :- \+q.
+q :- \+p.
+\end{verbatim}
+there are two stable models: one that makes p true and q false, and
+one that makes p false and q true.
+
+Stable models have several drawbacks.  Computing the stable model of a
+propositional program is NP-complete, so the best general algorithm
+known is exponential.  Also, it does not have the ``relevance''
+property.  That is, to find whether there is a stable model that makes
+a particular proposition symbol p true, one has to look at the entire
+program, not just the propositions that are used to define p.  For
+example, if the program contains a rule \verb|p :- \+p|, then there is
+no stable model at all, regardless of what the rest of the program is
+(as long as it doesn't involve p.)
+
+
+\input{wellfounded}
+
+\section{Other Stuff to think about?}
+
+We need examples! Planning? Use for-all type problems, e.g. to find if
+all nodes reachable from a given node are red, find if it is not the
+case that there exists a node reachable from the given node that is
+not red.
+
+
+*********************************
+
+Issues of safety.
+
+
+\section{Approximate Reasoning}
+
+Use course prerequisites example. Introduce undefined truth value.  Add
+undetermined facts for courses currently being taken.  Then requests for 
+whether have satisfied requirements will give:
+	true if satisfied without any current course
+	false if not satisfied even if all current courses are passed
+	undetermined if satisfaction depends on outcome of current courses.
+
+
+
+Categorization examples?  Propositional Horn clauses for bird
+identification.  Allow negation as failure, explicit negation.
+
+\begin{verbatim}
+cardinal :- red, crested.
+bluejay :- blue, crested.
+robin :- red_breasted, ~crested.
+
+Use undef as a kind of null value?:
+binarize relation
+undef :- ~undef.
+%emp(Name,Sal,Age) -> empsal/2 and empage/2
+emp(david,50000,_|_) is represented as ``facts'':
+
+empsal(david,50000).
+empage(david,_X) :- undef.
+
+or empage(david,X) :- between(45,X,55),undef.
+(so can fail if not between 45 and 55.)
+\end{verbatim}
+
+
+\section{Representation of Partial Knowledge with Well-Founded Models}
+
+We can use the undefined truth value to encode the fact that we don't
+know whether a particular proposition is true or false.  As an
+example, we will use a (simplification of a) simple game called {\em
+Wumpus}.  The game is played on a grid, and a hunter starts on some
+grid square and moves across the board searching for the one other
+square that contains the pot of gold.  The hunter can move left,
+right, up, or down, and his goal is to move from where he is to the
+square that has the gold and pick it up.  However, there are some
+squares on the grid that are dangerous.  Some squares contain pits,
+and if the hunter moves to such a square, he falls into the pit and is
+killed.  The hunter can sense when he is adjacent to a pit by feeling
+a breeze.  So if he moves to a square and feels a breeze, he knows
+that some adjacent (immediately left, right, up, or down) square
+contains a pit.  So the hunter must move from where he is to the gold
+while avoiding falling into any pit.
+
+The idea will be to represent the state of knowledge of the hunter by
+a well-founded model.  The following are fixed rules of how the game
+works:
+
+\begin{verbatim}
+%% grid provides the size of the grid.
+grid(4,4).
+
+%% A neighbor is a square to either side or above or below the current
+%%  square (and still on the grid.)
+neighbor(I,J,NI,J) :- NI is I+1, grid(MI,_), NI =< MI.
+neighbor(I,J,NI,J) :- NI is I-1, NI >= 1.
+neighbor(I,J,I,NJ) :- NJ is J+1, grid(_,MJ), NJ =< MJ.
+neighbor(I,J,I,NJ) :- NJ is J-1, NJ >= 1.
+
+%% feel(I,J,Sense) if the hunter has felt "Sense" on square I,J
+
+:- table feel/3.
+%% the hunter can feel only one of breeze and no_breeze
+feel(I,J,breeze) :- tnot(feel(I,J,no_breeze)).
+feel(I,J,no_breeze) :- tnot(feel(I,J,breeze)).
+
+:- table safe/2.
+%% A square is safe if it is not a pit
+safe(I,J) :- tnot(pit(I,J)).
+%% and if the hunter has sensed something there it is also safe.
+safe(I,J) :- visited(I,J).
+%% A square is safe if the hunter feels no breeze on some neighbor.
+safe(I,J) :- 
+	neighbor(I,J,NI,NJ),
+	visited(NI,NJ),
+	feel(NI,NJ,no_breeze).
+
+:- table pit/2.
+%% A square is a pit if it is not safe
+pit(I,J) :- tnot(safe(I,J)).
+%% A square is a pit if some neighbor feels a breeze but no other of
+%% its neighbors is a pit.
+pit(I,J) :-
+	neighbor(I,J,NI,NJ),
+	feel(NI,NJ,breeze),
+	tnot(another_neighbor_unsafe(NI,NJ,I,J)).
+
+%% Another neighbor (not (NI,NJ) is a pit.
+:- table another_neighbor_unsafe/4.
+another_neighbor_unsafe(I,J,NI,NJ) :-
+	neighbor(I,J,PI,PJ),
+	(PI =\= NI ; PJ =\= NJ),
+	tnot(safe(PI,PJ)).
+\end{verbatim}
+
+Consider the following state, in which the hunter has visited squares
+1,1 and 1,2, and felt a breeze on 1,1 and no breeze on 1,2:
+
+\begin{verbatim}
+%% a sample state
+feel(1,1,breeze).
+feel(1,2,no_breeze).
+visited(1,1).
+visited(1,2).
+\end{verbatim}
+
+With these rules and this state, we compute the following:
+
+\begin{verbatim}
+| ?- consult(wumpus,[spec_off]).
+[Compiling .\wumpus]
+[wumpus compiled, cpu time used: 0.1100 seconds]
+[wumpus loaded]
+
+yes
+| ?- pit(2,1).
+
+yes
+| ?- safe(2,2).
+
+yes
+| ?- safe(2,3).
+
+undefined
+| ?- 
+\end{verbatim}
+
+We see that the hunter can infer that there is a pit in square 2,1,
+since it is the neighbor of a cell in which a breeze has been felt
+(1,1), and all other neighbors of that cell (only 1,2) is known to be
+safe.
+
+So with this representation, we can develop a strategy for the hunter
+to safely move around the grid as follows.  The hunter uses WFM of the
+current knowledge base to determine what adjacent cells are safe and
+moves to one of them.  He then adds to the knowledge base that he has
+visited the new square and what he sensed in that square.  And he
+repeats the process.
+
+If the new information was undefined in the previous state, we can
+update the previous WFM in XSB by using \verb|force_answer_true/1|.
+However, in the example above, the hunter needs to add the
+\verb|visited| fact for the new square he moved to, and this fact was
+false in the previous WFM, not undefined.  I.e., we need to change the
+knowledge of visited from false to true, not from undefined to true.
+So in this system the WFM must be computed anew in each new state.
+(There may be another way to encode this problem so that all knowledge
+acquisition would be moving from facts with undefined truth values to
+those with distinct values, but I don't see it now.)
+
+Now in an actual game, a situation may arise in which the hunter has
+several places he can move but is unable to infer that any of them is
+safe.  In this case, if he wants to find the gold, he must make a
+potentially dangerous move to a square which may be a pit.  The WFM
+provides no information as to whether some square might more likely be
+safe than another square.  We could extend the WFM with probabilities
+to try to infer which squares are more likely to be safe.  This can be
+done within the PRISM (Sato) framework...
+
+
+leftover stuff for now...........
+
+
+
+
+XSB, with its tabling, does not improve over Prolog in handling
+floundering queries; all calls to negative subgoals must be ground in
+XSB for the closed-world interpretation of negation to be computed.
+XSB does extend Prolog in allowing nonstratified programs to be
+evaluated, and we will discuss how it does that later in the chapter.
+However, first we will explore how we can use tabling with stratified
+programs to compute some interesting results.
+*****end of leftover............
+
+There have been a number of approaches to defining the meaning of
+logic programs with the negation-as-failure operator.  We will
+describe one general approach that will shed light on several others.
+The intuitive idea is that Prolog programs are to be understood as
+rules that define predicates, not as first-order logical formulas.
+When we are just dealing with positive Horn rules, then these two
+intuitions coincide in some sense.  We saw that the least model of a
+Horn program defines the set of predicates whose atoms occur in heads
+of rules in the program, and the facts for those predicates are
+exactly the logical implications of the Horn clauses.  So we can use
+logical implication to define relations from Horn clauses.  However,
+when we include the negation operator, and want to interpret it in a
+``negation as failure'' way, things are not so simple.
+
+(Aside and Overview)
+
+The story for the following sections on proposed semantics for Prolog
+with \verb|\+|.
+
+1. We want to ``characterize'' the negation operator (\verb|\+|) in
+Prolog.  What does it precisely mean?  Prolog goals have 3 outcomes:
+yes, no, and infinite loop.  So our characterization of the meaning of
+goals will need to have 3 values: true, false and undefined (or
+undetermined, or unknown.)  There are several generally accepted
+approaches to providing such a semantics.
+
+2. The first is the completion semantics.  Here a goal is
+true if it is logically implied by the ''completion'' of the program;
+it is false if its negation is logically implied by the completion,
+and undefined otherwise.  Result, a) doesn't exactly characterize
+prolog with \verb|\+|: consider goal p and rule p :- p,f.  Prolog
+gives undefined (infinite loop); completion gives false. and b)
+completion (and Prolog) give undefined for p:-p, and thus doesn't give
+transitive closure as meaning of the program for transitive closure.
+So this tells us that maybe we don't want a semantics for \verb|\+| in
+Prolog, but for \verb|\+| in Tabled Prolog.
+
+3. Define Perfect models, only for predicate stratified programs.
+Gives nice definition of \verb|\+| in Tabled Prolog, but only for stratified
+programs.  All goals are true or false (no undefined.)  Correctly
+characterizes all terminating Tabled Prolog programs (when \verb|\+| is
+implemented in the ``obvious'' way.)
+
+4. Define Stable Model semantics for all (inc nonstratified) programs.
+Program has 0 or more stable models: goal is true under SM semantics
+if true in all SMs, false if false in all SMs, and undefined
+otherwise.  Problems: exponentiality, nonrelevance.  And for many
+interesting uses (e.g., combinatorial problems) SM characterizes a
+solution, e.g. a coloring of a graph.  So interesting aspect of an SM
+is the truth of various goals in the same model (i.e., a coloring)
+rather than the truth of a goal in all models (e.g., node 1 must be
+green in all valid colorings.)
+
+5. Define Well-Founded semantics.  ...
+
+6. Partial Stable Models, and connections between SM and WFS.
+
+(END Aside and Overview)
+
+(Take 2 Aside and Overview)
+
+1. How to give a semantics for Normal Logic Programs: Prolog programs
+with unconstrained negation.
+
+2. Define stratified programs, and give their semantics.
+
+3. Define semantics of parameterized programs: i.e., Some predicates
+given by relations, and take least fixed point using those definitions
+for those predicates.
+
+4. Define WFS as the limit of an iteration of parameterized programs:
+For every predicate symbol p, create a symbol p'.  Replace in original
+program every p under a negation by p'. Then start by taking meaning
+of this modified program parameterized by p'={} and p'=Universal. And
+alternating and iterating...
+
+5. Then define FO(ID): 
+a. A set of defined predicates, and a set of open predicates
+b. A set of rule with atoms of defined predicates in their heads
+	(and open or defined, pos or neg, literals in their bodies)
+c. A set of first-order sentences (using defined and open predicates)
+
+A model of an FO(ID) program is any first-order structure (for the
+defined and open predicates), such that the relations for the defined
+predicates are the (2-valued) well-founded model parameterized by the
+relations of the open predicates, and all the FO-sentences are true in
+the structure.
+
+6. Then Stable Models can be defined in FO(ID).
+
+
+
+
+1. Given a program (with negation).  If we know *nothing* about the
+truth or falsity of the negative subgoals, what could we still infer
+about true and false propositions?  
+
+Goals are true if they can be proved with absolutely NO help from
+the negative literals.  So delete all rules with negative literals and
+take least model, and all propositions true there must be true.
+
+Goals are true if they can not be proved no matter what help they got
+from the negative literals.  So delete all negative literals from the
+program rules, take least model, and propositions not in it are false.
+
+2. So given a program with negations, we use the above idea to
+determine known true propositions and known false propositions, T1 and
+F1.  Now given that we know the truth values of these subgoals, we
+reduce the program using them.  I.e., Delete each rule with a negative
+literal whose proposition is in T1, and delete from each remaining
+rule each negative literal whose proposition is in F1.  Now this
+program (along with T1 and F1) should give us the same meaning as the
+original program.  Now repeat the process of step 1 using this
+program, to get more propositions known true and known false.
+
+3. And continue until there is no change in the true and false sets.
+The resulting T and F sets determine the well-founded model, with
+propositions in neither T nor F being undefined.
+
+(END COMMENT)
+

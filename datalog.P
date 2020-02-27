@@ -1,0 +1,31 @@
+:- table avoids/2.
+avoids(Source,Target) :-
+	owes(Source,Target).
+avoids(Source,Target) :-
+	avoids(Source,Intermediate),
+	owes(Intermediate,Target).
+
+owes(X,Y) :-
+	X>0,X=<4000,
+	(X =:= 4000
+	 ->	Y = 1
+	 ;	Y is X+1
+	).
+end_of_file.
+
+owes(andy,bill).
+owes(bill,andy).
+owes(andy,carl).
+owes(carl,dave).
+
+avoids(Source,Target) :-
+	owes(Source,Intermediate),
+	avoids(Intermediate,Target).
+
+
+owes(andy,bill).
+owes(bill,carl).
+owes(carl,bill).
+
+
+

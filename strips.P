@@ -1,0 +1,107 @@
+/* An example of state search through a set of Prolog DB's (as
+represented using predicates in prolog_db. */
+
+:- import empty_db/1,assert_in_db/3,retractall_in_db/3,call_in_db/2,
+	clause_in_db/3 from prolog_db.
+:- import member/2 from basics.
+
+query :- start(IDB),writeln(userout,started),reach(IDB,GDB),goal(GDB).
+
+query2 :- start(IDB),reach(IDB,GDB,Mvs),goal(GDB),
+	reconstruct_mvs(Mvs,[],MVList),writeln(userout,MVList).
+
+start(DB) :-
+	init_db([clear(table),
+		 (clear(A) :- block(A),\+on(_,A)),
+		 block(blkA),block(blkB),block(blkC),block(blkD),
+		 block(blkE),block(blkF), %block(blkG), %block(blkH),
+
+		 on(blkA,table),
+		 on(blkB,blkA),
+		 on(blkC,blkB),
+		 on(blkD,blkC),
+		 on(blkE,blkD),
+		 on(blkF,blkE) %,
+		 %on(blkG,blkF),
+		 %on(blkH,blkG)
+		 ],
+		DB
+	       ).
+		 
+goal(DB) :-
+	init_db([clear(table),
+		 (clear(A) :- block(A),\+on(_,A)),
+		 block(blkA),block(blkB),block(blkC),block(blkD),
+		 block(blkE),block(blkF), %block(blkG), %block(blkH),
+
+		 %on(blkH,table),
+		 %on(blkG,blkH),
+		 %on(blkF,blkG),
+		 on(blkF,table),
+		 on(blkE,blkF),
+		 on(blkD,blkE),
+		 on(blkC,blkD),
+		 on(blkB,blkC),
+		 on(blkA,blkB)
+		 ],
+		DB
+	       ).
+	
+%move(PreCondition,RetractList,AddList,MoveName).
+move((clear(A),A\==table,clear(B),B\==A),
+     [on(A,_)],  % remove list
+     [on(A,B)],   % add list
+     mv(A,B)
+    ).
+
+:- table reach(_,_) as intern.
+reach(DB,DB). % :- writeln(userout,inreach).
+reach(DB0,DB) :-
+	%%writeln(userout,inreachr),
+	reach(DB0,DB1),
+	action(DB1,DB,_). %,writeln(userout,reached).
+
+
+:- table reach(_,_,_) as intern.
+reach(DB,DB,[]).
+reach(DB0,DB,mv(Mv,DB0,DB1)) :-
+	reach(DB0,DB1,_Mvs),
+	action(DB1,DB,Mv). %,writeln(userout,reached).
+
+
+action(DB0,DB,MoveName) :-
+	move(PreCondition,RetractList,AddList,MoveName),
+	call_in_db(PreCondition,DB0),
+	retractall_list_in_db(RetractList,DB0,DB1),
+	assert_list_in_db(AddList,DB1,DB).
+
+init_db(Clauses,DB) :-
+	empty_db(DB0),
+	assert_list_in_db(Clauses,DB0,DB).
+
+assert_list_in_db([],DB,DB).
+assert_list_in_db([Clause|Clauses],DB0,DB) :-
+	assert_in_db(Clause,DB0,DB1),
+	assert_list_in_db(Clauses,DB1,DB).
+
+retractall_list_in_db([],DB,DB).
+retractall_list_in_db([Clause|Clauses],DB0,DB) :-
+	retractall_in_db(Clause,DB0,DB1),
+	retractall_list_in_db(Clauses,DB1,DB).
+
+listing_in_db(DB) :-
+	clause_in_db(Head,Body,DB),
+	writeq(Head),
+	(Body == true
+	 ->	true
+	 ;	write(' :- '),writeq(Body)
+	),
+	writeln('.'),fail.
+listing_in_db(_).
+
+reconstruct_mvs([],_,[]).
+reconstruct_mvs(mv(Mv,DB0,DB),SeenDBs,[Mv|MVList]) :-
+	\+ member(DB0,SeenDBs),
+	reach(DB0,DB1,Mvs),DB1 = DB,
+	writeln(userout,Mv),
+	reconstruct_mvs(Mvs,[DB0|SeenDBs],MVList).

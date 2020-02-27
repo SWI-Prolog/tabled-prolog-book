@@ -1,0 +1,257 @@
+\section{Exercises}
+
+\begin{enumerate}
+\item
+Prolog has infix operations that allow you to write propositional
+expressions, such as \verb|(p /\ q \/ not(p /\ q)|).  We will use this syntax
+to represent propositional expressions, with \verb|/\| meaning "and", \verb|\/|
+meaning "or" and not meaning "not".
+
+We will represent a truth assignment as a list, such as:
+\begin{verbatim}
+[p=true,q=false,r=false]
+\end{verbatim}
+where each element in the list defines the mapping of a propositional
+symbol to true or false.
+
+Write a Prolog predicate eval\_tv(PropExp,TruthAsgn,TV) which takes a
+propositional expression, PropExp, and a truth assignment in
+TruthAsgn, and returns the truth value of that expression under that
+truth assignment in TV.
+
+For example 
+\begin{verbatim}
+| ?- eval_tv((p /\ q \/ not(q \/ p)),[p=false,q=false],TV).
+
+TV = true ;
+
+no
+| ?- 
+\end{verbatim}
+
+\item
+Extra Credit: (Not for the squeamish.  Only for those with time and
+interest.)  Write a predicate that, given a propositional formula,
+will print out its truth table.
+
+Prolog has builtin predicates write(Term) that writes the term Term,
+and nl, which writes out a newline.  Try for example:
+\begin{verbatim}
+| ?- write(hello),nl,write(world).
+\end{verbatim}
+
+\item
+Write a DCG to recognize and parse propositional sentences.
+
+\item
+Write a Prolog predicate prop\_clause/2 that takes a propositional
+formula (using \verb|/\|, \verb|\/|, and \verb|not|, as in the
+previous problems and produces an equivalent list of clauses.  A
+clause is represented as a list of literals.  This predicate should in
+effect convert the propositional formula into conjunctive normal form
+and then produce the resulting list of clauses.  (You do not have to
+create the CNF form if you find a more direct way to get the same
+result.)
+
+\item
+Write a Prolog predicate resolve/1 that takes a list of clauses,
+such as those generated in problem 1, applies the resolution strategy,
+succeeding if the clauses are unsatisfiable, and failing otherwise.
+
+One way to write resolve is as a recursive predicate that chooses a
+pair of resolvable clauses, generates the resolvent, adds it to the
+set of clauses if it's new, and recurses, until the empty clause is
+generated, or no new clauses can be generated.  Now you need to choose
+only one resolvable pair at each step; you don't want to backtrack and
+choose all pairs nondeterministically.  To do this in Prolog, you can
+use a metapredicate, once/1, which when applied to a predicate call,
+will return only the first answer the call generates.
+
+So for example, we get:
+\begin{verbatim}
+| ?- once(member(X,[a,b,c])).
+X = a;
+no
+| ?- 
+\end{verbatim}
+
+Using once/1, you can choose only one of the many ways resolvants
+might be generated at each step.
+
+\begin{enumerate}
+\item
+Add writeln/1 calls at appropriate places in your code so that you can
+see, for each the resolvant, what clauses were used to generate it.
+\item
+Test your program with reasonable clause sets.  Come up with an
+interesting example with some semantics for the propositions, and
+explain what your proof system does.
+\end{enumerate}
+
+\item
+This problem involves representing a first-order structure in a Prolog
+program and evaluating the meaning of formulas in such a structure.
+
+\begin{enumerate}
+\item
+Consider the representation of a first-order structure in Prolog.  For
+our problem, the structure will be an abstraction of a simple world
+with several people in it and several relations relating the people.
+We use the following representation:
+
+\begin{enumerate}
+
+\item
+To represent the domain, we will use a unary Prolog predicate,
+dom/1, which will return each element of the domain.
+So, for example, the fact:
+\begin{verbatim}
+dom(1).
+\end{verbatim}
+would indicate that 1 is in the domain of the structure.
+
+\item
+To represent the relations, we will use a binary predicate,
+relation/2, which returns pairs in which the first is a predicate
+symbol (of arity n) in the language, and the second is a list of
+length n representing a tuple in the corresponding relation.
+So, for example, the fact:
+\begin{verbatim}
+relation(<,[3,17]).
+\end{verbatim}
+would indicate that the predicate symbol \verb|<| is mapped to a relation
+that contains the ordered pair \verb|<3,17>|.
+
+\item
+To represent the functions, we will use a binary predicate,
+function/2, which returns pairs in which the first is a function
+symbol (of arity n) in the language, and the second is a list of
+length n+1 representing the function arguments and its value for those
+arguments in the graph of the corresponding function.
+So, for example, the fact:
+\begin{verbatim}
+function(+,[2,3,5]).
+\end{verbatim}
+would indicate that \verb|+| is a function symbol in the language that is
+mapped by the structure to a binary function that, given arguments 2
+and 3, returns 5.
+\end{enumerate}
+
+Task: Give definitions of these three Prolog predicates for a
+first-order structure representing the following situation:
+
+\begin{enumerate}
+\item
+There are 4 people: john\_jones, mary\_smith, bill\_rogers,
+jane\_doe.
+
+\item
+john\_jones and bill\_rogers are men, where men are represented by a
+unary relation symbol 'man'.  mary\_smith and jane\_doe are women, where
+women are represented by a unary relation symbol 'woman'.
+
+\item
+Some people love other people, represented by a binary relation
+symbol 'loves'.  In particular john\_jones loves mary\_smith and she
+loves him back.  And bill\_rogers loves jane\_doe, but jane\_doe loves
+john\_jones.
+
+\item
+Every person has a spouse, represented by a unary function symbol
+'spouse'.  In particular, john\_jones and mary\_smith are married (and
+thus are each other's spouses) and bill\_rogers and jane\_doe are also
+married.
+\end{enumerate}
+
+\item
+Write first-order formulas (in the language above) to represent the
+meanings of the following English sentences.  (You may use implication
+(\verb|->|) as a logical connective, if you wish.)  The constants we
+have in the logic are 'John', 'Mary', 'Jane', and 'Bill' (which refer
+to the obvious objects in the structure), the unary predicate symbols
+are 'man' and 'woman', the binary predicate symbol 'loves', the unary
+function symbol 'spouse'.
+
+\begin{enumerate}
+\item
+John loves Mary.
+\item
+Bill loves Jane but Jane loves John.
+\item
+Mary loves a man.
+\item
+Jane does not love her spouse.
+\item
+Every man loves his spouse.
+\item
+Not every woman loves her spouse.
+\item
+Every man loves a woman.  (i.e., for every man there is a woman that he loves)
+\item
+There is a man that every woman loves.
+\end{enumerate}
+
+\item
+We will represent first-order formulas in Prolog as shown in the
+following examples.
+
+\begin{verbatim}
+forall(x1,exists(y2,loves(x1,y2)))
+forall(x1,not(man(x1))\/exists(y,woman(y)/\loves(x1,y)))
+forall(x,loves(x,spouse(x)))
+\end{verbatim}
+
+So variables are represented by Prolog atoms that begin with the letters
+x, y, or z followed by a (possibly empty) sequence of digits.
+
+Universal quantification is represented by the Prolog term with forall
+at the root and its left child a variable, and its right child a
+formula.  And existential quantification is similar.
+
+The representation of terms and the other form of formulas should be
+clear from the examples.
+
+Task: Write a Prolog predicate: 
+\begin{verbatim}
+mean_fmla(+Formula,+VariableAsgn,-TV)
+\end{verbatim}
+that takes a first-order formula, a variable assignment, and returns
+true if the formula is true in the structure represented by the Prolog
+predicates dom/1, relation/2 and function/2.  A variable assignment is
+represented as a list of terms Varable=Object.  For example, a
+variable assignment for the structure of problem 1 might look like:
+[x=john\_jones,y1=jane\_doe].  We will assume that VariableAsgn has
+terms for every variable that appears free in Formula.
+
+We will need an auxiliary predicate, call it mean\_term, where
+mean\_term(+Term,+VariableAsgn,-Obj) takes a first-order logical term,
+a variable assignment, and returns the object that term means in the
+structure defined by dom/1 and friends.
+
+We will need a Prolog predicate to break apart a term that is an
+atomic formula (or a function application) into its components.  We
+use the builtin (infix) predicate =.. as the following example shows:
+
+\begin{verbatim}
+| ?- loves(john,spouse(x2)) =.. Term.
+Term = [loves,john,spouse(x2)];
+no
+| ?- 
+\end{verbatim}
+
+So given a left-hand argument of a term (tree), =.. breaks it apart
+into a list, where the first element of the list is the atom at the
+root of the term tree, and the tail of the list is a list of the terms
+that are the immediate children of the root.  =.. works in either
+direction, i.e., it will also construct a term tree from a list
+representing the root atom followed by its children (but we don't need
+that direction in this problem.)
+
+Task: Define the necessary predicates in Prolog, run mean\_fmla/3 on
+all the example formulas you came up with in problem 2 just above.
+Make up some other formulas, including some that are false in the
+structure of problem 1, and run mean\_fmla on them, explaining why they
+get the answers that they do.
+\end{enumerate}
+
+\end{enumerate}

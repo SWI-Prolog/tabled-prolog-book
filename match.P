@@ -1,0 +1,88 @@
+/* better way */
+:- import append/3 from basics.
+
+match(Pattern,String) :- match(Pattern,Pattern,String).
+
+%%match(Pattern,PatternLeft,StringLeft)
+match([],_Pattern,_StringLeft).
+match([C|PatternLeft],Pattern,[C|StringLeft]) :- !,
+	match(PatternLeft,Pattern,StringLeft).
+match(PatternLeft,Pattern,StringLeft) :-
+	restart(Pattern,PatternLeft,NewPatternLeft),
+	!,
+	match(NewPatternLeft,Pattern,StringLeft).
+match(_,Pattern,[_|StringLeft]) :-
+	match(Pattern,Pattern,StringLeft).
+
+:- table restart/3.
+restart(Pattern,PatternLeft,NewPatternLeft) :-
+	append(PatternPrefix,PatternLeft,Pattern),
+	PatternPrefix = [_|PatternPrefixTail],
+	matchLong(PatternPrefixTail,Pattern,NewPatternLeft).
+
+matchLong(PPT,Pattern,NewLeft) :-
+	append(_,PPTT,PPT),
+	append(PPTT,NewLeft,Pattern),
+	!.
+matchLong(_,Pattern,Pattern).
+
+end_of_file.
+
+
+:- import append/3 from basics.
+
+match(Pat,StrPre,StrSuff) :-
+    match_suffix_with_remainder(Pat,StrPre,PatMatched,PatLeft),
+    match_to_mismatch(PatLeft,StrSuff,PatWithMismatch,StrAfterMismatch,Matched),
+    (Matched == match
+     ->  append(PatMatched,PatWithMismatch,[_|NewStrPrefix]),
+         match(Pat,NewStrPrefix,StrAfterMismatch)
+     ;   true
+    ).
+
+match_suffix_with_remainder(Pat,SubPat,PatPrefix,PatSuffix) :-
+    (append(SubPat,PatSuffix,Pat)
+     ->  PatPrefix = SubPat
+     ;   SubPat = [_|SubPat1],
+         match_suffix_with_remainder(Pat,SubPat1,PatPrefix,PatSuffix)
+    ).
+
+match_to_mismatch([],Str,[],Str,match).
+match_to_mismatch([X|Pat],[Y|Str],[Y|PatWithMismatch],StrAfterMismatch,M) :-
+    (X == Y
+     ->  match_to_mismatch(Pat,Str,PatWithMismatch,StrAfterMismatch,M)
+     ;   PatWithMismatch = [],
+         StrAfterMismatch = Str,
+         M = mismatch
+    ).
+
+match([],_) :- !.
+match(Pat,[X|Str]) :-
+    match(Pat,[X],Str).
+
+:- import append/3 from basics.
+
+match(Pat,StrPre1,StrPre2,,StrSuff) :-
+    append(StrPre1,StrPre2,[_|StrPre]),
+    match_suffix_with_remainder(Pat,StrPre,PatMatched,PatLeft),
+    match_to_mismatch(PatLeft,StrSuff,PatWithMismatch,StrAfterMismatch,Matched),
+    (Matched == match
+     ->  match(Pat,PatMatched,PatWithMismatch,StrAfterMismatch)
+     ;   true
+    ).
+
+
+:- import append/3 from basics.
+
+match(Pat,StrPre1,StrPre2,,StrSuff) :-
+    app_match_suffix_with_remainder(Pat,StrPre1,StrPre2,PatMatched,PatLeft),
+    match_to_mismatch(PatLeft,StrSuff,PatWithMismatch,StrAfterMismatch,Matched),
+    (Matched == match
+     ->  match(Pat,PatMatched,PatWithMismatch,StrAfterMismatch)
+     ;   true
+    ).
+
+:- table app_match_suffix_with_remainder/5.
+app_match_suffix_with_remainder(Pat,StrPre1,StrPre2,PatMatched,PatLeft) :-
+    append(StrPre1,StrPre2,[_|StrPre]),
+    match_suffix_with_remainder(Pat,StrPre,PatMatched,PatLeft).

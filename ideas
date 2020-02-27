@@ -1,0 +1,92 @@
+The following was taken from the comp.lang.prolog newsgroup.  Maybe it
+has an interesting problem in it that tabling can help solve.
+
+From: franktokyo@yahoo.co.uk (Fr)
+Subject: I need help!!!
+Newsgroups: comp.lang.prolog
+Date: 7 Jan 2002 07:04:03 -0800
+Organization: http://groups.google.com/
+Lines: 73
+Message-ID: <ff36e3fe.0201070704.fb9233d@posting.google.com>
+NNTP-Posting-Host: 137.205.8.2
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: 8bit
+X-Trace: posting.google.com 1010415844 12181 127.0.0.1 (7 Jan 2002 15:04:04 GMT)
+X-Complaints-To: groups-abuse@google.com
+NNTP-Posting-Date: 7 Jan 2002 15:04:04 GMT
+Path: marge.ic.sunysb.edu!news-nysernet-16.sprintlink.net!news.sprintlink.net!bingnews.binghamton.edu!news.acsu.buffalo.edu!news.sunydutchess.edu!zombie.ncsc.mil!alnews.ncsc.mil!feed.news.qwest.net!newsfeed.direct.ca!look.ca!cyclone.bc.net!newsfeed.stanford.edu!postnews1.google.com!not-for-mail
+Xref: marge.ic.sunysb.edu comp.lang.prolog:14499
+
+I'm stuck with the following question, can anyone help? Pls reply to
+my email address franktokyo@yahoo.co.uk
+
+Suppose that we have a directed acyclic graph on 10 vertices,
+v1,v2,...,v9 and a 10th vertex called "home". The graph contains a
+path that has a
+directed edge from each vertex in this sequence to the next one along,
+so that as a result, from each vertex there is a path to home, and the
+distance
+from the i-th vertex to home is at most 10-i. In addition, there may
+be extra edges connecting a vertex to another that appears later on in
+the
+sequence. Assume that all edges are described by clauses of the form
+"edge(vi,vj)" where j>i, and you may also assume that if a vertex vi
+has more than
+one outgoing edge, then the "longest" edge (with respect to the above
+ordering) is listed first. (This assumption will be useful in part 2.)
+
+part 1: Define a predicate "distancehome" takin 2 arguments, that is
+satisfied if the first argument is a vertex and the second argument is
+a number
+that gives the length of a path in the graph from the vertex to home. 
+
+part 2: Suppose that a cat starts at v1 and a mouse starts at v2. In a
+single move the mouse always moves to whatever adjacent vertex is
+furthest along
+the sequence v1,v2,...,v9,home (so it takes the "longest" edge
+according to the ordering). The cat, being smarter, can move to any
+vertex of its choice,
+and is also allowed to move backwards along edges. We want to test
+whether the cat can catch the mouse before the mouse reaches home. The
+cat and
+mouse take turns to move, with the mouse moving first, and the mouse
+is caught if the cat ever moves to the vertex occupied by the mouse.
+(See the
+examples below.) Implement a predicate "catchable" that takes no
+arguments, and is satisfied if and only if the cat can catch the
+mouse.
+
+part 3: Extend your solution to part 2 so that if "catchable" is
+satisfied, it outputs the sequence of vertices visited by the cat.
+
+Example: Suppose we have 
+
+edge(v3,v5).edge(v4,v7).
+
+followed by the edges that make the original path: 
+
+edge(v1,v2). edge(v2,v3), edge(v3,v4),
+edge(v4,v5), edge(v5,v6), edge(v6,v7),
+edge(v7,v8), edge(v8,v9), edge(v9,home).
+
+Then "catchable" is satisfied, since the mouse will move along the
+v3-v5 edge, but the cat can skip that edge and take the slightly
+longer v4-v7 edge.
+
+Suppose instead we have the edge 
+
+edge(v1,v5).
+
+together with the original edges of the path to home. Then the cat can
+take that edge, while the mouse moves from v2 to v3. Next, the mouse
+will move
+to v4, and the cat is allowed to move backwards from v5 to v4, so
+"catchable" should be satisfied. But if that edge went to v4 instead
+of v5, then
+"catchable" would not be satisfied since the cat can move along v1-v4
+while the mouse moves along v2-v3, then the mouse moves to v4 but the
+cat
+must now move away from v4 (thus, the rule is that the cat may not
+stay put, and the mouse is not caught if it moves to the cat's vertex,
+but only if the
+cat moves to the mouse's vertex).

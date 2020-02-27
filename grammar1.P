@@ -1,0 +1,57 @@
+at :- abolish_all_tables.
+% Test-grammar:
+%    :- auto_table.
+
+:- table b/2, g/2.
+    s --> b, [c].
+    s --> g, [d].
+
+    b --> b, b.
+    b --> [a].
+
+    g --> g, [a].
+    g --> [a].
+
+
+    s(s(P,c),S0,S) :- 
+           b(S0,S1), 'C'(S1,c,S),
+           b(P,S0,S1), 'C'(S1,c,S).
+
+    s(s(P,d),S0,S) :- 
+           g(S0,S1), 'C'(S1,d,S),
+           g(P,S0,S1), 'C'(S1,d,S).
+
+    b(b(P1,P2),S0,S) :- 
+           b(S0,S1), b(S1,S),
+           b(P1,S0,S1), b(P2,S1,S).
+    b(a,S0,S) :- 
+           'C'(S0,a,S),
+           'C'(S0,a,S).
+
+    g(g(P),S0,S) :- 
+           g(S0,S1), 'C'(S1,a,S),
+           g(P,S0,S1), 'C'(S1,a,S).
+    g(a,S0,S) :- 
+           'C'(S0,a,S),
+           'C'(S0,a,S).
+
+'C'(X,W,Y) :- word(X,W), Y is X+1.
+
+word(1,a).
+word(2,a).
+word(3,a).
+word(4,a).
+word(5,a).
+word(6,a).
+word(7,a).
+word(8,a).
+word(9,a).
+word(10,a).
+word(11,a).
+word(12,a).
+word(13,a).
+word(14,a).
+word(15,a).
+word(16,a).
+word(17,d).
+

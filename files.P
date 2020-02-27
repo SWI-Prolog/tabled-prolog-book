@@ -1,0 +1,38 @@
+between(L,L,H) :- L =< H.
+between(L,M,H) :- L < H, L1 is L+1, between(L1,M,H).
+
+/* create synthetic attr/3 predicate. create_attr(K,L,Ind) where K is
+number of objs, L is number of attrs/obj */
+
+create_attr(K,L,Index) :-
+	abolish(attr/3),
+	dynamic(attr/3),
+	index(attr/3,Index),
+	Tot is K*L,
+	write('Creating '),write(Tot),write(' facts...'),
+	(between(1,I,K),
+	 between(1,J,L),
+	 asserta(attr(I,J,J)),
+	 fail
+	 ;
+	 true
+	),
+	writeln(completed).
+
+tcall(Goal,Cnt) :-
+	cputime(T0),
+	(between(1,_,Cnt),
+	 call(Goal),
+	 fail
+	 ;
+	 true
+	),
+	cputime(T1),
+	Time is T1-T0,
+	writeln(userout,cputime(Time)).
+
+
+%% create_attr(1000,50,0),tcall(attr(1000,50,50),1000).
+%% create_attr(1000,50,1),tcall(attr(1000,50,50),1000).
+
+%% create_attr(10000,500,[1+2]),tcall(attr(1000,50,_),1000).

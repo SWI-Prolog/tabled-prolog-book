@@ -1,0 +1,59 @@
+/* propositional logic:  Use p/\q\/not(r).
+TA = [p=t,q=f].
+*/
+
+tv(P,TA,TV) :-
+	atomic(P),!,
+	once(member(p=TV,TA)).
+tv(P/\Q,TA,TV) :-
+	tv(P,TA,TV1),
+	tv(Q,TA,TV2),
+	and(TV1,TV2,TV).
+tv(P\/Q,TA,TV) :-
+	tv(P,TA,TV1),
+	tv(Q,TA,TV2),
+	or(TV1,TV2,TV).
+
+and(t,t,t).
+and(t,f,f).
+and(f,t,f).
+and(f,f,f).
+
+or(t,t,t).
+or(t,f,t).
+or(f,t,t).
+or(f,f,f).
+
+/********************************/
+:- import append/3 from basics.
+
+clausalform(F,[[F]]) :- atomic(F), !.
+clausalform(not(F),[[not(F)]]) :- atomic(F), !.
+clausalform(not(A/\B),CF) :- clausalform(not(A)\/not(B),CF).
+clausalform(not(A\/B),CF) :- clausalform(not(A)/\not(B),CF).
+clausalform(not(not(A)),CF) :- clausalform(A,CF).
+clausalform(A/\B,CF) :-
+	clausalform(A,CFA),
+	clausalform(B,CFB),
+	union(CFA,CFB,CF).
+
+clausalform(A\/B,CF) :-
+	clausalform(A,CFA),
+	clausalform(B,CFB),
+	disjoin_clauses(CFA,CFB,CF).
+
+disjoin_clauses([],_,[]).
+disjoin_clauses([C1|Cs],C2s,RCs) :-
+	disjoin_one_clause(C1,C2s,C3s),
+	disjoin_clauses(Cs,C2s,C4s),
+	union(C3s,C4s,RCs).
+
+disjoin_one_clause(_L,[],[]).
+disjoin_one_clause(L,[L1|Ls],[L1a|Lsa]) :-
+	union(L,L1,L1a),
+	disjoin_one_clause(L,Ls,Lsa).
+
+union(SA,SB,S) :-
+	append(SA,SB,DS),
+	sort(DS,S).
+

@@ -1,0 +1,16 @@
+:- import conset/2,conget/2,coninc/1 from prof_sbp.
+:- import load_dyn/1,length/2 from basics.
+
+:- table i/1.
+i(true) :- !,coninc(ctr).
+i((A,B)) :- !,coninc(ctr),i(A),coninc(ctr),i(B),coninc(ctr).
+i(A) :- coninc(ctr),clause(A,B),coninc(ctr),i(B),coninc(ctr).
+
+lf(File) :- load_dyn(File).
+run(G) :- abolish_all_tables,
+	conset(ctr,0),
+	(i(G),fail;true),
+	conget(ctr,Val),
+	findall(X,d(X),L),length(L,N),
+	write('Steps('),write(N),write('): '),writeln(Val).
+

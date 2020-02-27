@@ -1,0 +1,97 @@
+/* simple NL grammar, chapter 1 */
+
+s(S0,S) :- np(S0,S1), vp(S1,S).
+
+np(S0,S) :- det(S0,S1), n(S1,S).
+
+vp(S0,S) :- tv(S0,S1), np(S1,S).
+vp(S0,S) :- v(S0,S).
+
+det(S0,S) :- S0=[the|S].
+det(S0,S) :- S0=[a|S].
+det(S0,S) :- S0=[every|S].
+
+n(S0,S) :- S0=[man|S].
+n(S0,S) :- S0=[woman|S].
+n(S0,S) :- S0=[park|S].
+
+tv(S0,S) :- S0=[loves|S].
+tv(S0,S) :- S0=[likes|S].
+
+v(S0,S) :- S0=[walks|S].
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**********************
+
+s --> np, vp.
+
+np --> det, n.
+
+vp --> tv, np.
+vp --> v.
+
+det --> [the].
+det --> [a].
+det --> [every].
+
+n --> [man].
+n --> [woman].
+n --> [park].
+
+tv --> [loves].
+tv --> [likes].
+
+v --> [walks].
+
+**********************/
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**************************
+
+expr --> term, addterm.
+addterm --> [].
+addterm --> [+], expr.
+term --> factor, multfactor.
+multfactor --> [].
+multfactor --> [*], term.
+factor --> [I], {integer(I)}.
+factor --> ['('], expr, [')'].
+
+**************************/

@@ -1,0 +1,68 @@
+% knapsack problem
+at :- abolish_all_tables.
+
+:- table ks/2.
+% ks(+I,+K) if there is a subset of items 1,...,I that sums to K.
+ks(0,0).		% the empty set sums to 0
+ks(I,K) :- I>0,		% don't include this Ith element in the knapsack
+	I1 is I-1, ks(I1,K).
+ks(I,K) :- I>0, 	% do include this Ith element in the knapsack
+	item(I,Ki), K1 is K-Ki, K1 >= 0, I1 is I-1, ks(I1,K1).
+
+%item(X,1) :- X>=1.	% every item is of size 1.
+
+item(X,Y) :- X > 0, X < 20, exp(2,X,Y).
+
+exp(_X,0,1).
+exp(X,N,Y) :- N>0, N1 is N-1, exp(X,N1,Y1), Y is X*Y1.
+/**
+item(1,1).
+item(2,2).
+item(3,4).
+item(4,8).
+item(5,16).
+item(6,32).
+item(7,64).
+/**/
+
+
+% ks(+I,+K,-F) if there is a subset of items 1,...,I that sums to K; F
+% is 1 if a subset includes the Ith item and 0 if not.
+:- table ks/3.
+ks(0,0,0).		% the empty set sums to 0
+ks(I,K,0) :- I>0,	% don't include this Ith element in the knapsack
+	I1 is I-1, ks(I1,K,_).
+ks(I,K,1) :- I>0, 	% do include this Ith element in the knapsack
+	item(I,Ki), K1 is K-Ki, K1 >= 0, I1 is I-1, ks(I1,K1,_).
+
+
+:- import get_calls/3, get_returns/2 from trie_tables.
+% Go back through table to find actual sets that will fill the pack
+findpack(I,K,S) :-
+	get_calls(ks(I,K),_C,_S)
+	 ->	findpack0(I,K,S)
+	 ;	write('Error: '), write(ks(I,K)), writeln(' not in table'),
+		fail.
+
+findpack0(0,0,[]).
+findpack0(I,K,[I|Set]) :- I>0,
+	get_calls(ks(I,K),C,S), 
+	get_returns(C,S),
+	I1 is I-1,
+	item(I,Ki), K1 is K-Ki,
+	findpack0(I1,K1,Set).
+findpack0(I,K,Set) :- I>0,
+	get_calls(ks(I,K),C,S), 
+	get_returns(C,S),
+	I1 is I-1,
+	findpack0(I1,K,Set).
+
+
+
+:- table sks/3.
+% ks(+I,+K,-Set) if Set is a subset of items 1,...,I that sums to K.
+sks(0,0,[]).		% the empty set sums to 0
+sks(I,K,Set) :- I>0,	% don't include this Ith element in the knapsack
+	I1 is I-1, sks(I1,K,Set).
+sks(I,K,[I|Set]) :- I>0, 	% do include this Ith element in the knapsack
+	item(I,Ki), K1 is K-Ki, K1 >= 0, I1 is I-1, sks(I1,K1,Set).

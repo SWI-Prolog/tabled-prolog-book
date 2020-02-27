@@ -1,0 +1,17 @@
+:- table strat(_,_,lattice(max(_,_,_))).
+
+strat(P,A,0).
+strat(P,A,L) :-
+	rule(H,Body),
+	functor(H,P,A),
+	comma_member(SubGoal,Body),
+	(SubGoal = \+(SubAtom)
+	 ->	true
+	 ;	SubAtom = SubGoal
+	),
+	functor(SubAtom,SP,SA),
+	strat(SP,SA,SL),
+	(SubGoal == SubAtom
+	 ->	L = SL
+	 ;	L is SL+1
+	).

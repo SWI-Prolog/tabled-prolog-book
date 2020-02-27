@@ -1,0 +1,90 @@
+:- import empty_trie/1, add_to_trie/3, find_in_trie/2 from tries_prolog.
+
+%% no imported predicates; calls must have explicit module.
+%% test: load_file_to_trie('tries_prolog.P',Trie),xsb_profiling:profile_call(call_in_db((empty_trie(TT),add_to_trie([aa],TT,TT1),find_in_trie([XXX],TT1),remove_from_trie([aa],TT1,TT2)),Trie)).
+
+load_file_to_trie(FileName,Trie) :-
+	empty_trie(Trie0),
+	open(FileName,read,IStr),
+	read_terms_to_trie(IStr,Trie0,Trie),
+	close(IStr).
+
+read_terms_to_trie(IStr,Trie0,Trie) :-
+	read(IStr,Term),
+	(Term == end_of_file
+	 ->	Trie = Trie0
+	 ;	(Term = (_:-_)
+		 ->	add_to_trie([Term],Trie0,Trie1)
+		 ; Term = (:- _)
+		 ->	add_to_trie([Term],Trie0,Trie1)
+		 ;	add_to_trie([(Term:-true)],Trie0,Trie1)
+		),
+		read_terms_to_trie(IStr,Trie1,Trie)
+	).
+
+
+
+
+bld_trie(N,T0,T) :-
+	(N > 0
+	 ->	add_to_trie_nv([f(N,N),a],T0,T1),
+		N1 is N-1,
+		bld_trie(N1,T1,T)
+	 ;	T = T0
+	).
+	
+ubld_trie(N,T0,T) :-
+	(N > 0
+	 ->	remove_from_trie([f(N,N),a],T0,T1),
+		N1 is N-1,
+		ubld_trie(N1,T1,T)
+	 ;	T = T0
+	).
+
+:- import for/3 from basics.
+bld_trie1(K,T) :-
+	findall([X,Y,Z],(for(X,1,K),for(Y,1,K),for(Z,1,K)),Terms),
+	empty_trie(T0),
+	add_list_to_trie(Terms,T0,T1),
+	remove_list_from_trie(Terms,T1,T).
+
+:- table add_list_to_trie/3 as intern.
+add_list_to_trie([],T,T).
+add_list_to_trie([P|Ps],T0,T) :-
+	add_to_trie_nv(P,T0,T1),
+	add_list_to_trie(Ps,T1,T).
+
+:- table remove_list_from_trie/3 as intern.
+remove_list_from_trie([],T,T).
+remove_list_from_trie([P|Ps],T0,T) :-
+	remove_from_trie(P,T0,T1),
+	remove_list_from_trie(Ps,T1,T).
+
+:- import call_c/1 from standard.
+:- import standard_symbol/3 from std_xsb.
+call_in_db(true,_DB) :- !.
+call_in_db((A,B),DB) :- !, call_in_db(A,DB), call_in_db(B,DB).
+call_in_db(\+(G),DB) :- !, \+ call_in_db(G,DB).
+call_in_db((C->A;B),DB) :- !, (call_in_db(C,DB) -> call_in_db(A,DB) ; call_in_db(B,DB)).
+call_in_db((A;B),DB) :- !, (call_in_db(A,DB) ; call_in_db(B,DB)).
+call_in_db(G,_DB) :- G = _:_, !, call(G).
+call_in_db(G,_DB) :- functor(G,F,A), standard_symbol(F,A,_), !, call_c(G).
+call_in_db(G,DB) :-
+	find_in_trie([(G:-B)],DB),
+	call_in_db(B,DB).
+
+% test!! empty_trie(T0),add_to_trie([(app([],L,L):-true)],T0,T1),add_to_trie([(app([X|L1],L2,[X|L3]):-app(L1,L2,L3))],T1,T2), call_in_db(app([a,b,c,d],[f,g],RES),T2).
+
+% test!! empty_trie(T0),add_to_trie([(app([],L,L):-true)],T0,T1),add_to_trie([(app([X|L1],L2,[X|L3]):-app(L1,L2,L3))],T1,T2), call_in_db(app(Frst,Lst,[a,b,c,d]),T2).
+
+% test!! empty_trie(T0),add_to_trie([(len([],0):-true)],T0,T1),add_to_trie([(len([_|L],N) :- len(L,N1),N is N1+1)],T1,T2), call_in_db(len([a,b,c,d],RES),T2).
+
+interp(true) :- !.
+interp((A,B)) :- !, interp(A), interp(B).
+interp((C->A;B)) :- !, (interp(C) -> interp(A) ; interp(B)).
+interp((A;B)) :- !, (interp(A) ; interp(B)).
+interp(G) :- G = _:_, !, call(G).
+interp(G) :- functor(G,F,A),standard_symbol(F,A,_), !, call_c(G).
+interp(G) :-
+	clause(G,B),
+	interp(B).

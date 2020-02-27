@@ -1,0 +1,45 @@
+/* sequence comparisons.  How to change one sequence into another.
+A=a_1 a_2 ... a_n
+B=b_1 b_2 b_3 ... b_m
+Change A into B using 3 operations: insert, delete, replace each cost 1.
+*/
+
+% c(N,M,C) if C is minimum cost of changing a_1...a_N into b_1...b_M
+:- table c/3.
+c(0,0,0).
+c(0,M,M) :- M > 0.
+c(N,0,N) :- N > 0.
+c(N,M,C) :- N > 0, M > 0,
+	N1 is N-1, M1 is M-1, 
+	c(N1,M,C1), C1a is C1+1,	% insert last of A to make B
+	c(N,M1,C2), C2a is C2+1,	% delete last of A to make B
+					% replace last of A to make B
+	c(N1,M1,C3), a(N,A), b(M,B), (A==B -> C3a=C3; C3a is C3+1),
+	min(C1a,C2a,Cm1), min(Cm1,C3a,C).
+
+min(X,Y,Z) :- X =< Y -> Z=X ; Z=Y.
+
+a(1,a).
+a(2,b).
+a(3,b).
+a(4,c).
+a(5,b).
+a(6,a).
+a(7,b).
+
+b(1,b).
+b(2,a).
+b(3,b).
+b(4,b).
+b(5,a).
+b(6,b).
+b(7,b).
+
+time(G) :- 
+	abolish_all_tables,
+	cputime(T0),
+	(call(G),writeln(G),fail; true),
+	cputime(T1),
+	Time is T1-T0,
+	write('Cputime: '),writeln(Time),
+	fail.

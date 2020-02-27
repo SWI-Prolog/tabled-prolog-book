@@ -1,0 +1,50 @@
+:- import member/2 from basics.
+
+:- table avoids/2.
+avoids(X,Y) :- owe(X,Y).
+avoids(X,Y) :- owe(X,Z), avoids(Z,Y).
+
+avoids(X,Y,L) :- owe(X,Y), \+member(Y,L).
+avoids(X,Y,L) :- owe(X,Z), \+member(Z,L), avoids(Z,Y,[Z|L]).
+
+owes(andy,bill).
+owes(bill,carl).
+owes(carl,bill).
+
+owe(a,b).
+owe(a,b).
+owe(b,c).
+owe(b,c).
+owe(c,d).
+owe(c,d).
+owe(d,e).
+owe(d,e).
+owe(e,f).
+owe(e,f).
+owe(f,g).
+owe(f,g).
+owe(g,h).
+owe(g,h).
+owe(h,i).
+owe(h,i).
+owe(i,j).
+owe(i,j).
+owe(j,k).
+owe(j,k).
+owe(k,l).
+owe(k,l).
+owe(l,m).
+owe(l,m).
+owe(m,o).
+owe(m,o).
+owe(o,p).
+owe(o,p).
+owe(p,q).
+owe(p,q).
+owe(q,r).
+owe(q,r).
+owe(r,s).
+owe(r,s).
+owe(s,t).
+owe(s,t).
+

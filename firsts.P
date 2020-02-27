@@ -1,0 +1,26 @@
+:- op(1050,xfx,(==>)).
+
+:- table first/3.
+first(_,0,[]).
+first([],K,[]) :- K>0.
+first([S|R],K,L) :- K>0,
+    (S ==> B),
+    first(B,K,L1),
+    length(L1,K1),
+    Kr is K - K1,
+    first(R,Kr,L2),
+    append(L1,L2,L).
+first([S|R],K,[S|L]) :- K>0,
+    \+ (S ==> _),    % S is a terminal
+    K1 is K-1,
+    first(R,K1,L).
+
+
+e ==> [e,+,t].
+e ==> [e,-,t].
+e ==> [t].
+t ==> [t,*,f].
+t ==> [t,/,f].
+t ==> [f].
+f ==> [int].
+f ==> ['(',e,')'].

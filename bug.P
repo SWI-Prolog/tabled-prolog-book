@@ -1,0 +1,48 @@
+:- auto_table.
+
+mis(min(Mach),IS) :-
+        mis(Mach,Bis),
+	setof(S,indistinguishable(Mach,Bis,S),IS).
+
+m(dfa,a,0,b).
+m(dfa,a,1,f).
+m(dfa,b,0,g).
+m(dfa,b,1,c).
+m(dfa,c,0,a).
+m(dfa,c,1,c).
+m(dfa,d,0,c).
+m(dfa,d,1,g).
+m(dfa,e,0,h).
+m(dfa,e,1,f).
+m(dfa,f,0,c).
+m(dfa,f,1,g).
+m(dfa,g,0,g).
+m(dfa,g,1,e).
+m(dfa,h,0,g).
+m(dfa,h,1,c).
+
+mis(dfa,a).
+mfs(dfa,c).
+
+indistinguishable(Mach,S1,S2) :-
+	m(Mach,S1,_,_),
+	m(Mach,S2,_,_),
+	tnot(distinguishable(Mach,S1,S2)).
+
+% Assume Mach is a completed deterministic machine
+% S1 and S2 are distinquishable if S1 is final and S2 is not.
+distinguishable(Mach,S1,S2) :-
+	mfs(Mach,S1),
+	m(Mach,S2,_,_),
+        tnot(mfs(Mach,S2)).
+% S1 and S2 are distinquishable if S2 is final and S1 is not.
+distinguishable(Mach,S1,S2) :-
+	mfs(Mach,S2),
+	m(Mach,S1,_,_),
+        tnot(mfs(Mach,S1)).
+% S1 and S2 are distinguishable if some symbol Sy takes them to states that
+%    are distinguishable.
+distinguishable(Mach,S1,S2) :-
+        m(Mach,S1,Sy,T1),
+        m(Mach,S2,Sy,T2),
+        distinguishable(Mach,T1,T2).

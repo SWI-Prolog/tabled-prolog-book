@@ -1,0 +1,39 @@
+:- table b/3,g/3,s/3,b_abs/3,g_abs/3.
+    s(s(P,c)) --> b_abs(P), [c].
+    s(s(P,d)) --> g_abs(P), [d].
+
+    b(b(P1,P2)) --> b_abs(P1), b_abs(P2).
+    b(a) -->  [a].
+
+    g(g(P)) --> g_abs(P), [a].
+    g(a) --> [a].
+
+    b_abs({X:b(X,S0,S)},S0,S) :- b(_,S0,S).
+
+    g_abs({X:g(X,S0,S)},S0,S) :- g(_,S0,S).
+
+/**    g(g(P),S0,S) :- 
+           g_abs(P,S0,S1), 'C'(S1,a,S).
+    g(a,S0,S) :- 
+           'C'(S0,a,S).
+
+    b_abs({X:b(X,S0,S)},S0,S) :- b(_,S0,S).
+
+    g_abs({X:g(X,S0,S)},S0,S) :- g(_,S0,S).
+**/
+
+eterm(AT,AT) :- var(AT), !.
+eterm({X:R},T) :- !,
+	call(R),
+	eterm(X,T).
+eterm(AT,T) :-
+	AT =.. [F|As],
+	eterm_list(As,Ts),
+	T =.. [F|Ts].
+
+eterm_list([],[]).
+eterm_list([A|As],[T|Ts]) :-
+	eterm(A,T),
+	eterm_list(As,Ts).
+
+

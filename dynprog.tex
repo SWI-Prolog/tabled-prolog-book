@@ -1,0 +1,154 @@
+\chapter{Dynamic Programming in XSB}
+
+Dynamic Programming is the name for a general strategy used in
+algorithms when one organizes the computation to be done in such a way
+that subproblems are evaluated only once instead of many times.  With
+this description of the dynamic programming strategy, one can see that
+the tabling strategy of XSB is a {\em dynamic} dynamic programming
+strategy.  That is, regardless of how the computation is structured at
+compile time (by the programmer), tabling ensures that subproblems are
+evaluated only once.  So this suggests that problems amenable to
+dynamic programming solutions might be particularly appropriate for
+evaluating with XSB.  This is indeed the case, and in this chapter we
+will see a number of examples.  
+
+These problems have a common characteristic.  They all can be solved
+by writing down a simple specification of the problem.  However, if
+one thinks as a Prolog programmer about the execution of the
+specification, it seems horrendously redundant and inefficient.  But
+executing it with tabling declarations eliminates the redundancy and
+actually turns the specification into an efficient algorithm.
+
+\section{The Knap-Sack Problem}
+
+The first problem we will consider is the knap-sack problem.  The idea
+is that we have a knap-sack and a bunch of things of various sizes to
+put in it.  The question is whether there is a subset of the things
+that will fit exactly into the knap-sack.  The problem can be formally
+stated as follows:
+
+\begin{quote}
+  Given $n$ items, each of integer size $k_i$ $(1 \le i \le n)$, and a
+  knap-sack of size K.  1) determine whether there is a subset of the
+  items that sums to K.  2) Find such a subset.
+\end{quote}
+
+We will represent the items and their sizes by using a set of facts
+\verb|item/2|, where \verb|item(3,5)| would mean that the third item
+is of size 5.
+
+To determine whether there is a subset of items that exactly fill the
+knap-sack, we can just nondeterministicaly try all alternatives.
+
+\begin{verbatim}
+% ks(+I,+K) if there is a subset of items 1,...,I that sums to K.
+ks(0,0).               % the empty set sums to 0
+ks(I,K) :- I>0,        % don't include this Ith element in the knapsack
+    I1 is I-1, ks(I1,K).
+ks(I,K) :- I>0,        % do include this Ith element in the knapsack
+    item(I,Ki), K1 is K-Ki, K1 >= 0, I1 is I-1, ks(I1,K1).
+\end{verbatim}
+
+The first clause says that the empty set takes no space in the sack.
+The second clause covers the case in which the Ith item is {\em not}
+included in the sack.  The third clause handles the case in which the
+Ith item {\em is} included in the sack.
+
+This program could be exponential in the number of items, since it
+tries all subsets of items.  However, there are only $I^2$ possible
+distinct calls to \verb|ks/2|, so tabling will make this polynomial.
+
+This program just finds whether a packing of the knapsack exists; it
+doesn't return the exact set of items that fit.  We could simply add a
+third argument to this definition of \verb|ks/2| which would be the
+list of items added to the knap-sack.  But that might then build an
+exponential-sized table.  For example with every item of size one,
+there are exponentially many items to include to make a sum.  So
+instead of simply adding another parameter and tabling that predicate,
+we will use \verb|ks/2| to avoid constructing a table unnecessarily.
+Note that this is similar to how we constructed a parse tree for a
+grammar by using the recognizer.  Notice that \verb|ksp/3| uses
+\verb|ks/2| in its definition.
+
+\begin{verbatim}
+ksp(0,0,[]).
+ksp(I,K,P) :- I>0,
+    I1 is I-1, ks(I1,K),
+    ksp(I1,K,P).
+ksp(I,K,[I|P]) :- I>0,
+    item(I,Ki), K1 is K-Ki, K1 >= 0, I1 is I-1, ks(I1,K1),
+    ksp(I1,K1,P).
+\end{verbatim}
+
+(There is something going on here.  Can we figure out a syntax or
+conventions to make this uniform?)
+
+\begin{verbatim}
+% ks(+I,+K) if there is a subset of items 1,...,I that sums to K.
+ks(0,0).
+ks(I,K) :- ks1(I,K,_).
+  ks1(I,K,I1) :- I>0,I1 is I-1, ks(I1,K).
+ks(I,K) :- ks2(I,K,_).
+  ks2(I,K,I1) :- I>0, item(I,Ki), K1 is K-Ki, K1 >= 0, I1 is I-1, ks(I1,K1).
+
+ksp(0,0,[]).
+ksp(I,K,P) :- ks1(I,K,I1), ksp(I1,K,P).
+ksp(I,K,[I|P]) :- ks2(I,K,I1), ksp(I1,K1,P).
+\end{verbatim}
+
+
+
+\section{Sequence Comparisons}
+
+Another problem where dynamic programming is applicable is in the
+comparison of sequences.  Given two sequences A and B, what is the
+miniml number of operations to turn A into B?  The allowable
+operations are: insert a new symbol, delete a symbol, and replace a
+symbol.  Each operation costs one unit.
+
+A program to do this is:
+\begin{verbatim}
+/* sequence comparisons.  How to change one sequence into another.
+A=a_1 a_2 ... a_n
+B=b_1 b_2 b_3 ... b_m
+Change A into B using 3 operations: 
+    insert, delete, replace: each operation costs 1.
+*/
+
+% c(N,M,C) if C is minimum cost of changing a_1...a_N into b_1...b_M
+:- table c/3.
+c(0,0,0).
+c(0,M,M) :- M > 0.             % must insert M items
+c(N,0,N) :- N > 0.              % must delete N items
+c(N,M,C) :- N > 0, M > 0,
+        N1 is N-1, M1 is M-1, 
+        c(N1,M,C1), C1a is C1+1,        % insert into A
+        c(N,M1,C2), C2a is C2+1,        % delete from B
+        c(N1,M1,C3),                    % replace
+                a(N,A), b(M,B), (A==B -> C3a=C3; C3a is C3+1),
+        min(C1a,C2a,Cm1), min(Cm1,C3a,C).       % take best of 3 ways
+
+min(X,Y,Z) :- X =< Y -> Z=X ; Z=Y.
+
+% example data
+a(1,a). a(2,b). a(3,b). a(4,c). a(5,b). a(6,a). a(7,b).
+b(1,b). b(2,a). b(3,b). b(4,b). b(5,a). b(6,b). b(7,b).
+\end{verbatim}
+The first three clauses for \verb|c/3| are clear; most of the work is
+done in the last clause.  It reduces the problem to a smaller problem
+in three different ways, one for each of the operations of insert,
+delete, and replace.  Each reduction costs one unit, except that
+``replacement'' of a symbol by itself costs nothing.  It then takes
+the minimum of the costs of these ways of turning string A into string
+B.
+
+In Prolog this would be exponential.  With tabling it is polynomial.
+
+\section{??}
+
+Dynamic Programming, e.g. optimal association for matrix
+multiplication
+
+Searching, games (see Bratko)
+
+Pruning (alpha-beta search)

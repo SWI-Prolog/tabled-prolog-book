@@ -1,0 +1,67 @@
+/****
+:- table reachable/2.
+reachable(Source,Target) :- edge(Source,Target).
+reachable(Source,Target) :-
+    reachable(Source,Intermediate),
+    edge(Intermediate,Target).
+/****************/
+/*
+edge(a,b).
+edge(b,c).
+edge(c,b).
+*/
+/******
+edge(1,2).
+edge(2,3).
+edge(3,4).
+edge(4,5).
+edge(5,6).
+edge(6,7).
+edge(7,8).
+edge(8,9).
+edge(9,10).
+edge(10,1).
+/**********/
+/******************
+:- table expr/2, term/2.
+
+expr --> expr, [+], term.
+expr --> term.
+term --> term, [*], factor.
+term --> factor.
+factor --> ['('], expr, [')'].
+factor --> [Int], {integer(Int)}.
+
+
+:- table expr/3, term/3.
+
+expr(Val) --> expr(Eval), [+], term(Tval), {Val is Eval+Tval}.
+expr(Val) --> term(Val).
+term(Val) --> term(Tval), [*], factor(Fval), {Val is Tval*Fval}.
+term(Val) --> factor(Val).
+factor(Val) --> ['('], expr(Val), [')'].
+factor(Int) --> [Int], {integer(Int)}.
+/***********************/
+/****************
+:- table expr/3, term/3.
+'C'(I1,W,I) :- word(I1,W,I).
+
+set_string(String) :- 
+    retractall(word(_,_,_)),
+    assert_words(String,0).
+
+assert_words([],_).
+assert_words([Word|Words],N) :- 
+    N1 is N+1, assert(word(N,Word,N1)), assert_words(Words,N1).
+
+expr(Val) --> expr(Eval), [+], term(Tval), {Val is Eval+Tval}.
+expr(Val) --> term(Val).
+term(Val) --> term(Tval), [*], factor(Fval), {Val is Tval*Fval}.
+term(Val) --> factor(Val).
+factor(Val) --> ['('], expr(Val), [')'].
+factor(Int) --> [Int], {integer(Int)}.
+/******************/
+:- suppl_table(2).
+:- edb student/3, enroll/2, course/2.
+yrCourse(Yr,CrsName) :- 
+    student(StdId,_,Yr), enroll(StdId,CrsId), course(CrsId,CrsName).

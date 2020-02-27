@@ -1,0 +1,31 @@
+% Find the longest path (without cycles) in a weighted directed graph.
+:- import memberchk/2 from basics.
+:- import aggregInit/0, bagMax/2 from myaggregs.
+:- hilog maximum.  maximum(X,Y,Z) :- X @>= Y -> Z=X; Z=Y.
+
+% top call:
+lp(S,T,C) :- aggregInit, bagMax(lp(S,T),C).
+
+% max of costs over all intermediate nonlooping paths, eliminating
+% multiple paths through same set of nodes.
+lp(S,T)(C) :- bagMax(lp(S,T,_),C).
+
+% max cost over any nonlooping path
+lp(X,Y,[X,Y])(C) :- edge(X,Y,C).
+lp(X,Y,L1)(C) :- 
+	bagMax(lp(X,Z,L),C1),
+	edge(Z,Y,C2),
+	\+ memberchk(Y,L),
+	sort([Y|L],L1),
+	C is C1+C2.
+
+edge(a,b,5).
+edge(b,d,6).
+edge(b,c,1).
+edge(c,e,3).
+edge(e,d,1).
+edge(a,c,7).
+edge(c,d,2).
+
+edge(c,a,1).
+edge(d,a,1).

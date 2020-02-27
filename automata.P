@@ -1,0 +1,381 @@
+/* XSB programs that explore some basic issues in automata theory.
+*/
+:- compiler_options([spec_off]).
+
+:- import member/2 from basics.
+:- import tsetof/3 from setof.
+at :- abolish_all_tables.
+
+:- auto_table.
+
+% :- accept(m0s1s2s,s1).
+m(m0s1s2s,q0,0,q0).
+m(m0s1s2s,q0,'',q1).
+m(m0s1s2s,q1,1,q1).
+m(m0s1s2s,q1,'',q2).
+m(m0s1s2s,q2,2,q2).
+
+mis(m0s1s2s,q0).
+
+mfs(m0s1s2s,q2).
+
+string(s1,0,0,1).
+string(s1,1,0,2).
+string(s1,2,1,3).
+string(s1,3,1,4).
+string(s1,4,1,5).
+string(s1,5,2,6).
+
+stringlen(s1,6).
+
+string(s2,0,0,1).
+string(s2,1,2,2).
+string(s2,2,1,3).
+
+stringlen(s2,3).
+
+accept(MachineName,StringName) :-
+	mis(MachineName,StateStart),
+	recognize(MachineName,StringName,StateStart,StateFinal,0,StringFinal),
+	mfs(MachineName,StateFinal),
+	stringlen(StringName,StringFinal).
+
+% right recursive
+recognize(_,_,MState,MState,SLoc,SLoc).
+recognize(MachineName,StringName,MState0,MState,SLoc0,SLoc) :-
+	string(StringName,SLoc0,Symbol,SLoc1),
+	m(MachineName,MState0,Symbol,MState1),
+	recognize(MachineName,StringName,MState1,MState,SLoc1,SLoc).
+recognize(MachineName,StringName,MState0,MState,SLoc0,SLoc) :-
+	m(MachineName,MState0,'',MState1),
+	recognize(MachineName,StringName,MState1,MState,SLoc0,SLoc).
+
+
+% left recursive, more efficient  (maybe not)
+% :- acceptl(m0s1s2s,s1).
+acceptl(MachineName,StringName) :-
+	mis(MachineName,StateStart),
+	recognizel(MachineName,StringName,StateStart,StateFinal,0,StringFinal),
+	mfs(MachineName,StateFinal),
+	stringlen(StringName,StringFinal).
+
+recognizel(_,_,MState,MState,SLoc,SLoc).
+recognizel(MachineName,StringName,MState0,MState,SLoc0,SLoc) :-
+	recognizel(MachineName,StringName,MState0,MState1,SLoc0,SLoc1),
+	string(StringName,SLoc1,Symbol,SLoc),
+	m(MachineName,MState1,Symbol,MState).
+recognizel(MachineName,StringName,MState0,MState,SLoc0,SLoc) :-
+	recognizel(MachineName,StringName,MState0,MState1,SLoc0,SLoc),
+	m(MachineName,MState1,'',MState).
+
+% epsilon-free machines
+% define transition function
+m(efree(Mach),State,Symbol,TargState) :-
+	emoves(Mach,State,State1),
+	m(Mach,State1,Symbol,State2),
+	Symbol \== '',
+	emoves(Mach,State2,TargState).
+
+% define emoves
+emoves(_,State,State).
+emoves(Mach,State0,State) :-
+	emoves(Mach,State0,State1),
+	m(Mach,State1,'',State).
+
+% define initial and final states
+mis(efree(Mach),IS) :- mis(Mach,IS).
+mfs(efree(Mach),FS) :- mfs(Mach,FS1),emoves(Mach,FS,FS1).
+% I think this is wrong mfs(efree(Mach),FS) :- mfs(Mach,FS1),emoves(Mach,FS1,FS).
+
+
+% Define deterministic machine from a nondeterministic one.
+% The initial state is the singleton set consisting of the initial 
+%   state of the nondeterministic machine (assuming epsilon-free.)
+mis(det(Mach),[IS]) :- mis(Mach,IS).
+
+% A state is reachable if it is the initial state or if it can be 
+%   reached by one step from a reachable state.
+reachable(Mach,S) :- mis(Mach,S).
+reachable(Mach,S) :- reachable(Mach,S1),m(Mach,S1,_,S).
+
+% The next state of the deterministic machine given a state and symbol 
+%   is the set of nondeterministic states which are a next state starting 
+%   from element of the current deterministic state.
+m(det(Mach),State0,Sym,State) :-
+	reachable(det(Mach),State0),
+	tsetof(NDS, a_next(Mach,State0,Sym,NDS), State).
+
+% A next state is reachable if it is a next state from some member of 
+%   the current deterministic state.
+a_next(Mach,DState,Sym,NDState) :- 
+	member(S1,DState),
+	m(Mach,S1,Sym,NDState).
+
+% A final state is a reachable deterministic state that contains the 
+%   nondeterministic final state.
+mfs(det(Mach),FS) :- mfs(Mach,NFS), reachable(det(Mach),FS),member(NFS,FS).
+
+% completed machine
+% A symbol is in the aplhabet of a machine if it appears in a non-epsilon 
+%    transition.
+alphabet(Mach,Sym) :- 
+        m(Mach,_,Sym,_),
+	Sym \== ''.
+
+% S is a (possibly reachable) state in machine if it's initial or has an
+%    in edge.
+is_state(Mach,S) :- m(Mach,_,_,S).
+%is_state(Mach,S) :- m(Mach,S,_,_).	% isn't reachable with no in edges
+is_state(Mach,S) :- mis(Mach,S).
+
+mis(completed(Mach),IS) :- mis(Mach,IS).
+mfs(completed(Mach),FS) :- mfs(Mach,FS).
+
+% Assume Mach is deterministic
+% There is a transition to ``sink'' if there is no other transition on
+%    this symbol from this state.
+m(completed(Mach),So,Sy,sink) :-
+        is_state(Mach,So),
+        alphabet(Mach,Sy),
+        tnot(isatransition(Mach,So,Sy)).
+% Add all transitions from sink to sink
+m(completed(Mach),sink,Sy,sink) :-
+        alphabet(Mach,Sy).
+% Otherwise the same
+m(completed(Mach),So,Sy,Ta) :-
+        m(Mach,So,Sy,Ta).
+	
+% There is a transition if there's a state it transits to.
+isatransition(Mach,So,Sy) :-
+        m(Mach,So,Sy,_).
+
+m(dm1,a,0,a).
+m(dm1,a,1,b).
+m(dm1,b,2,b).
+m(dm1,b,3,c).
+m(dm1,c,4,c).
+
+mis(dm1,a).
+mfs(dm1,c).
+
+
+% complement machine
+% Asume machine is completed and deterministic.
+% The transitions of the complement machine are the same.
+m(complement(Mach),So,Sy,Ta) :-
+        m(Mach,So,Sy,Ta).
+
+% The initial state of the complement machine is the same.
+mis(complement(Mach),S) :- 
+        mis(Mach,S).
+
+% A state is a final state of the complement if it is NOT the final state
+%    of the underlying machine.
+mfs(complement(Mach),S) :- 
+	is_state(Mach,S),
+	tnot(mfs(Mach,S)).
+
+
+/************************************************************/
+
+m(dfa,a,0,b).
+m(dfa,a,1,f).
+m(dfa,b,0,g).
+m(dfa,b,1,c).
+m(dfa,c,0,a).
+m(dfa,c,1,c).
+m(dfa,d,0,c).
+m(dfa,d,1,g).
+m(dfa,e,0,h).
+m(dfa,e,1,f).
+m(dfa,f,0,c).
+m(dfa,f,1,g).
+m(dfa,g,0,g).
+m(dfa,g,1,e).
+m(dfa,h,0,g).
+m(dfa,h,1,c).
+
+mis(dfa,a).
+mfs(dfa,c).
+
+% Assume Mach is a completed deterministic machine
+% S1 and S2 are distinquishable if S1 is final and S2 is not.
+distinguishable(Mach,S1,S2) :-
+	mfs(Mach,S1),
+	is_state(Mach,S2),
+        tnot(mfs(Mach,S2)).
+% S1 and S2 are distinquishable if S2 is final and S1 is not.
+distinguishable(Mach,S1,S2) :-
+	mfs(Mach,S2),
+	is_state(Mach,S1),
+        tnot(mfs(Mach,S1)).
+% S1 and S2 are distinguishable if some symbol Sy takes them to states that
+%    are distinguishable.
+distinguishable(Mach,S1,S2) :-
+        m(Mach,S1,Sy,T1),
+        m(Mach,S2,Sy,T2),
+        distinguishable(Mach,T1,T2).
+
+% min
+m(min(Mach),So,Sy,Ta) :-
+        reachable(min(Mach),So),
+	member(Ss,So),
+	m(Mach,Ss,Sy,T),
+	tsetof(S,indistinguishable(Mach,T,S),Ta).
+
+mis(min(Mach),IS) :-
+        mis(Mach,Bis),
+	tsetof(S,indistinguishable(Mach,Bis,S),IS).
+mfs(min(Mach),FS) :-
+        mfs(Mach,Bfs),
+	tsetof(S,indistinguishable(Mach,Bfs,S),FS).
+
+indistinguishable(Mach,S1,S2) :-
+	is_state(Mach,S1),
+	is_state(Mach,S2),
+	tnot(distinguishable(Mach,S1,S2)).
+
+end_of_file.
+
+/************************************************************
+	Regular Expressions
+************************************************************/
+
+%re(Name,Expression).
+
+reacc(Exp,StringName) :-
+	reacc(Exp,StringName,0,F),
+	stringlen(StringName,F).	
+
+%reacc(Exp,StringName,From,To).
+reacc(A,S,From,To) :- atomic(A),string(S,From,A,To).
+reacc((E1*E2),S,From,To) :-
+	reacc(E1,S,From,M),
+	reacc(E2,S,M,To).
+reacc((E1+_E2),S,From,To) :- reacc(E1,S,From,To).
+reacc((_E1+E2),S,From,To) :- reacc(E2,S,From,To).
+reacc(@(_E),_S,From,From).
+reacc(@(E),S,From,To) :-
+	reacc(@(E),S,From,Mid),
+	reacc(E,S,Mid,To).
+
+/* THIS DOESN'T WORK!!  For a*b*a it conflates the 2 distinct a's
+m(re(RE),i(RE),RE,f(RE)) :- atomic(RE).
+
+m(re(RE1*RE2),i(RE1*RE2),'',i(RE1)).
+m(re(RE1*RE2),f(RE1),'',i(RE2)).
+m(re(RE1*RE2),f(RE2),'',f(RE1*RE2)).
+m(re(RE1*_RE2),S,Sy,T) :- m(re(RE1),S,Sy,T).
+m(re(_RE1*RE2),S,Sy,T) :- m(re(RE2),S,Sy,T).
+
+m(re(RE1+RE2),i(RE1+RE2),'',i(RE1)).
+m(re(RE1+RE2),i(RE1+RE2),'',i(RE2)).
+m(re(RE1+RE2),f(RE1),'',f(RE1+RE2)).
+m(re(RE1+RE2),f(RE2),'',f(RE1+RE2)).
+m(re(RE1+_RE2),S,Sy,T) :- m(re(RE1),S,Sy,T).
+m(re(_RE1+RE2),S,Sy,T) :- m(re(RE2),S,Sy,T).
+
+m(re(@(RE)),i(@(RE)),'',f(@(RE))).
+m(re(@(RE)),i(@(RE)),'',i(RE)).
+m(re(@(RE)),f(RE),'',f(@(RE))).
+m(re(@(RE)),f(@(RE)),'',i(@(RE))).
+m(re(@(RE)),S,Sy,T) :- m(re(RE),S,Sy,T).
+
+mis(re(RE),i(RE)).
+mfs(re(RE),f(RE)).
+
+string(s3,0,a,1).
+string(s3,1,b,2).
+string(s3,2,b,3).
+string(s3,3,c,4).
+string(s3,4,b,5).
+string(s3,5,b,6).
+
+stringlen(s3,6). */
+
+% :- accept(re(a* @(b+a)),s3).
+
+m(re(m(RE,I,J)),i(RE,I,J),m(RE,I,J),f(RE,I,J)) :- atomic(RE), J is I+1.  %could use succ
+
+
+
+m(re(m(RE1*RE2,I,J)),i(m(RE1*RE2,I,J)),'',i(m(RE1,I,_))).
+m(re(m(RE1*RE2,I,J)),f(m(RE1,I,J1)),'',i(m(RE2,J1,J))).
+m(re(m(RE1*RE2,I,J)),f(m(RE2,_J1,J)),'',f(m(RE1*RE2,_I,J))). %wrong!!!
+m(re(RE1*_RE2),S,Sy,T) :- m(re(RE1),S,Sy,T).
+m(re(_RE1*RE2),S,Sy,T) :- m(re(RE2),S,Sy,T).
+
+m(re(m(RE1,I,J1)+m(RE2,J1,J)),i(m(RE1,I,J1)+m(RE2,J1,J)),'',i(m(RE1,I,J1))).
+m(re(m(RE1,I,J1)+m(RE2,J1,J)),i(m(RE1,I,J1)+m(RE2,J1,J)),'',i(m(RE2,J1,J))).
+m(re(m(RE1,I,J1)+m(RE2,J1,J)),f(m(RE1,I,J1)),'',f(m(RE1,I,J1)+m(RE2,J1,J))).
+m(re(m(RE1,I,J1)+m(RE2,J1,J)),f(m(RE2,J1,J)),'',f(m(RE1,I,J1)+m(RE2,J1,J))).
+m(re(m(RE1,I,J1)+_),S,Sy,T) :- m(re(m(RE1,I,J1)),S,Sy,T).
+m(re(_+m(RE2,J1,J)),S,Sy,T) :- m(re(m(RE2,J1,J)),S,Sy,T).
+
+m(re(@(RE)),i(@(RE)),'',f(@(RE))).
+m(re(@(RE)),i(@(RE)),'',i(RE)).
+m(re(@(RE)),f(RE),'',f(@(RE))).
+m(re(@(RE)),f(@(RE)),'',i(@(RE))).
+m(re(@(RE)),S,Sy,T) :- m(re(RE),S,Sy,T).
+
+mis(re(m(RE,I,F)),i(m(RE,I,F))).
+mfs(re(m(RE,I,F)),f(m(RE,I,F))).
+
+% :- accept(re(m(a* @(b+a),0,_)),s3).
+
+string(s3,0,a,1).
+string(s3,1,b,2).
+string(s3,2,b,3).
+string(s3,3,a,4).
+string(s3,4,b,5).
+string(s3,5,b,6).
+
+stringlen(s3,6).
+
+
+
+
+
+
+/***************mach to re************/
+
+m(mre,1,1,3).
+m(mre,1,0,2).
+m(mre,2,0,1).
+m(mre,2,1,3).
+m(mre,3,0,2).
+m(mre,3,1,2).
+
+mis(mre,1).
+mfs(mre,2).
+
+re(S,T,0,Mach,RE) :- is_state(Mach,S),is_state(Mach,T),S\==T,
+	(setof(Sy,m(Mach,S,Sy,T),RE)->true;RE=empty).
+%	setof(Sy,m(Mach,S,Sy,T),RE).
+re(S,S,0,Mach,[estring|RE]) :- is_state(Mach,S),
+	(setof(Sy,m(Mach,S,Sy,S),RE)->true;RE=[]).
+%	setof(Sy,m(Mach,S,Sy,S),RE).
+re(I,J,K,Mach,[RE1* @(RE2) * RE3,RE4]) :- K>0,
+	K1 is K-1,
+	re(I,K,K1,Mach,RE1),
+	re(K,K,K1,Mach,RE2),
+	re(K,J,K1,Mach,RE3),
+	re(I,J,K1,Mach,RE4).
+
+
+simp(A,B) :-
+	simp1(A,C), 
+	(A \== C
+	 ->	simp(C,B)
+	 ;	B = A
+	).
+
+simp1([A],A) :- !.
+simp1([A|B],R) :- sort([A|B],S),elim_dups(S,R),R\==S.
+
+
+elim_dups([],[]).
+elim_dups([X,X|Y],Z) :- !,elim_dups([X|Y],Z).
+elim_dups([X,Y|Z],[X|W]) :- elim_dups([Y|Z],W).
+
+

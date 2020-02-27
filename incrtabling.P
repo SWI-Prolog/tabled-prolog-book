@@ -1,0 +1,21 @@
+:- table p/2 as incremental.
+
+p(X,Y) :- q(X,Y), Y =< 5.
+
+:- dynamic q/2 as incremental.
+q(a,1).
+q(b,3).
+q(c,5).
+q(d,7).
+
+
+:- dynamic e/2 as incremental.
+e(a,b).
+e(b,c).
+e(c,d).
+e(d,c).
+
+:- table path/2 as incremental.
+path(X,Y) :- e(X,Y).
+path(X,Y) :- path(X,Z), e(Z,Y).
+

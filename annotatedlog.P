@@ -1,0 +1,53 @@
+:- import bagMin/2 from aggregs.
+:- hilog minimum.
+minimum(X,Y,Z) :- X =< Y -> Z=X ; Z=Y.
+
+:- op(500,xfx,@).
+
+/***********
+G:D :- bagMin(andFun(G),D).
+
+andFun(G)(D) :- G@L,sumlist(L,D).
+
+sumlist([],0).
+sumlist([X|L],S) :- sumlist(L,S1), S is S1+X.
+
+p(X,Y)@[D] :- edge(X,Y):D.
+p(X,Y)@[D1,D2] :- p(X,Z):D1,edge(Z,Y):D2.
+
+edge(a,b)@[5].
+edge(b,d)@[6].
+edge(b,c)@[1].
+edge(c,e)@[3].
+edge(e,d)@[1].
+edge(a,c)@[7].
+edge(c,d)@[2].
+/******************/
+:- import bagMax/2 from aggregs.
+:- hilog maximum.
+maximum(X,Y,Z) :- X >= Y -> Z=X ; Z=Y.
+
+not(G)@[D] :- 
+	G@D1,
+	minList(D1,D2),
+	D is 1000-D2.  % confidence is between 0 and 1000
+
+G:D :- bagMax(andFun(G),D).
+
+andFun(G)(D) :- G@L, minList(L,D).
+
+minList([X],X).
+minList([X,Y|L],M) :- minList([Y|L],M1), (X < M1 -> M = X ; M = M1).
+
+h4@[D] :- h1:D.
+h4@[D] :- h2:D.
+
+h5@[D1,D2] :- not(h4):D1, h3:D2.
+
+c1@[D] :- h4:D.
+c1@[D1,D2] :- h5:D1, s4:D2.
+
+h1@[315].
+h2@[125].
+h3@[500].
+s4@[1000].

@@ -1,0 +1,188 @@
+\section{Exercises}
+
+\begin{enumerate}
+\item
+Write and TEST Prolog definitions for the following predicates. You
+will be graded on the simplicity and elegance of your solutions, AND
+how well you test them.  You can download XSB from
+xsb.sourceforge.net for unix (for which you must configure and
+compile, according to instructions) or for Windows (as a zip file that
+unzips to a set of directories with an executable in
+XSB/config/i686-pc-cygwin/bin/xsb.exe).  Contact me if you need help.
+
+\begin{enumerate}
+\item
+member(Element,List) iff Element is a member of the list List. \\
+Give a query that uses it to produce all members of a list that are
+greater than some integer.
+
+\item
+last(Element,List) iff Element is the last element of list List.
+
+\item
+
+consecutive(X,Y,L) iff X and Y are consecutive elements (in that order) of list L.
+
+\item
+delete\_first(X,Li,Lo) iff list Lo is list Li with the first
+occurrence of X removed.
+
+\item
+delete\_all(X,Li,Lo) iff list Lo is list Li with all occurrences of X
+removed.
+
+\item
+append(L1,L2,L3) iff list L3 is the result of concatenating list L1
+and L2. ***Use it to split a list into all pairs of sublists that
+concatenate to produce the given list.
+
+\item
+sublist(Sl,L) iff list Sl is a (contiguous) sublist of list L.
+
+\item
+\begin{enumerate}
+\item
+intersect(L1,L2,I) iff I is the list that is the intersection of the
+lists L1 and L2. (Assume L1 and L2 do not have duplicates within
+themselves but may be in any order.  Produce in I one list that
+contains all the elements in any order that are in both L1 and L2.)
+
+\item
+intersect(L1,L2,I) iff I is the list that is the intersection of
+the lists L1 and L2. (Assume L1 and L2 are in increasing order (using
+@<).  The list representing the intersection should also be in order.)
+\end{enumerate}
+
+\item
+reverse(L,R) iff list R is the reverse of the list L.  What is
+the complexity of your solution for a list of length n?  Explain.
+
+\item
+palindrome(L) iff the list L is a palindrome, i.e. reads the same
+backwards and forwards.
+
+\item
+permutation(L1,L2) iff list L2 is a permutation of list L1. (It
+should be able to generate all permutations.)
+
+\item
+split(E,L,P1,P2) iff lists P1 and P2 are a partition of list L of
+integers, such that all elements of P1 are less than or equal E and
+all elements of P2 are greater than E.
+
+\item
+quick\_sort(L,S) iff S is the sorted version of the list L of
+integers. The idea of quicksort is 1) to choose an element from the
+list; 2) split the list into two lists putting all elements smaller
+than (or equal to) the chosen element into the first list and the
+others into the second (Hint: Use split/4 for this); 3) recursively
+sort the two sublists; and 4) concatenate the two sorted sublists
+(putting the chosen element back in the middle).
+\end{enumerate}
+
+\item
+Consider the very simple "English" grammar we discussed in the chapter:
+
+\begin{verbatim}
+s --> np,vp.
+np --> det,n.
+vp --> tv,np.
+vp --> v.
+det --> [the].
+det --> [a].
+det --> [every].
+n --> [man].
+n --> [woman].
+n --> [park].
+tv --> [loves].
+tv --> [likes].
+v --> [walks].
+\end{verbatim}
+
+Extend this grammar to include some prepositional phrases, as "in the
+park".  Also include several proper names, such as john, mary, and
+rohit.  You should add them to the grammar in a natural way so that
+they follow the (simple syntactic) rules of English grammar.  For
+example, prepositional phrases can modify nouns and they can modify
+verb phrases.
+
+Example sentences that you should be able to process include:
+
+\begin{enumerate}
+\item
+a man walks to the park
+\item
+the man in the park likes mary
+\item
+the man saw a woman in the park with a telescope
+\item 
+the man in the park with a telescope walks
+\item 
+the man walks in the park with a telescope 
+\item 
+many, many more, some of which may not make much sense but are ``syntactically'' OK.
+\end{enumerate}
+(Add the necessary words to their appropriate categories.)
+
+Test your grammar on these examples and others of your own choosing.
+
+\item
+Extend your grammar of the previous problem to construct a parse tree for each
+sentence it recognizes.
+
+Run your parser to construct parse trees for each of the example
+sentences of problem 1, and for several others of your own choosing.
+Does your parser produce multiple different parses for some of your
+examples?  Should it?  Discuss.
+
+\end{enumerate}
+
+\section{Exercise Discussion}
+
+The usual definition of reverse, using append (and called naive
+reverse) does not work for all calling modes.  It only uses
+unification so why doesn't it work in all calling modes as append/3
+does?  Consider the following definition:
+\begin{verbatim}
+reverse(L,R) :- same_length_list(L,R), reverse1(L,R).
+
+same_length_list([],[]).
+same_length_list([_|L1],[_|L2]) :- same_length_list(L1,L2).
+
+reverse1([],[]).
+reverse1([X|L],R) :- reverse1(L,Rhs), append(Rhs,[X],R).
+\end{verbatim}
+reverse1/2 is the standard definition of naive reverse.  This reverse
+works in all directions.  Even:
+\begin{verbatim}
+| ?- reverse(L,R).
+\end{verbatim}
+gives correct answers.
+We could also use the linear version of reverse1, with an accumulator:
+\begin{verbatim}
+reverse1([],R,R).
+reverse1([X|L],S,R) :- reverse1(L,[X|S],R).
+\end{verbatim}
+and calling reverse1(L,[],R) in the body of reverse.
+(Note that same\_length\_list is done only once and is linear, so this
+definition of reverse has the complexity of the reverse1 definition.)
+
+To come up with this definition, I was thinking of the definition of
+naive reverse and why we couldn't interchange the two calls in the
+body of the recursive rule and put the append first.  And the problem
+is that with the direct call (with first argument bound and second a
+variable) we get a call of the form
+\begin{verbatim}
+   append(-,[+],-)
+\end{verbatim}
+(where - indicate variables and + indicates a bound value.)  But there
+are infinitely many pairs of lists that stand in this relationship, so
+Prolog is necessarily in an infinite loop.  So why do we need to look
+at only finitely many of these lists?  Because we know the length of
+the resulting list.  So by setting the resulting list to be of the
+right length (the same as the input list), we can make that call have
+only finitely many (in fact, only 1) solutions.  So that's how I came
+to this definition.  Which also points out that for the naive
+definition, we might as well interchange the body calls and actually
+do the append first, which will make the definition tail recursive and
+save space.  Of course its time complexity is still quadratic

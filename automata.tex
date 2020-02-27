@@ -1,0 +1,981 @@
+\chapter{Automata Theory in XSB}
+
+In this chapter we explore how we can use XSB to understand and
+implement some of the formal systems of automata theory.  We will
+begin by defining finite state machines (FSM), and exploring
+executable specifications in XSB of string acceptance, epsilon-free
+machines, deterministic machines and other interesting notions.
+
+\section{Finite State Machines}
+
+We represent a finite state machine using three relations:
+\begin{enumerate}
+\item
+m(MachineName,State,Symbol,TargetState) which describes the transition
+relation for a machine, with MachineName being the name of the machine
+(to allow us to represent many machines using the same relation),
+State is a state of the FSM, Symbol is an input symbol, and
+TargetState is a state to which the machine transitions from State on
+seeing Symbol.
+
+\item
+mis(MachineName,InitialState) where InitialState is the initial state
+of the FSM named MachineName.
+
+\item
+mfs(MachineName,FinalState) where FinalState is a final state of the
+FSM named MachineName.
+\end{enumerate}
+
+By including a MachineName in each tuple, we can use these relations to
+represent a number of different FSM's.  This will be convenient later.
+
+We will use the symbol \verb|''| (the atom with the empty name) as a
+pseudo-symbol to represent epsilon transitions, transitions a machine
+can make without consuming any input symbol.
+
+For example, the following relations represent the machine pictured in
+Figure \ref{m0s1s2s}, which we will call m0s1s2s, since it recognizes
+strings made up of a string of 0's followed by a string of 1's
+followed by a string of 2's:
+\begin{verbatim}
+m(m0s1s2s,q0,0,q0).
+m(m0s1s2s,q0,'',q1).
+m(m0s1s2s,q1,1,q1).
+m(m0s1s2s,q1,'',q2).
+m(m0s1s2s,q2,2,q2).
+
+mis(m0s1s2s,q0).
+
+mfs(m0s1s2s,q2).
+\end{verbatim}
+
+\begin{figure}
+\centerline{\epsfbox{figures/m0s1s2s.eps}}
+\caption{The finite state machine: m0s1s2s}\label{m0s1s2s}
+\end{figure}
+
+We represent strings with two relations.  Again we will name strings
+for convenience.  
+\begin{enumerate}
+\item
+string(StringName,Index,Symbol,Index1) where StringName is the name of
+the string, Symbol is the Index1-th symbol in the string and Index is
+Index1-1.  For example, the string ``001112'', which we will call s1,
+would be represented by:
+\begin{verbatim}
+string(s1,0,0,1).
+string(s1,1,0,2).
+string(s1,2,1,3).
+string(s1,3,1,4).
+string(s1,4,1,5).
+string(s1,5,2,6).
+\end{verbatim}
+and string ``021'', which we'll name s2, would be represented by:
+\begin{verbatim}
+string(s2,0,0,1).
+string(s2,1,2,2).
+string(s2,2,1,3).
+\end{verbatim}
+
+\item
+stringlen(StringName,Length) where Length is the length of the string
+named StringName.  For example, for the previous examples, we would
+have the facts:
+\begin{verbatim}
+stringlen(s1,6).
+stringlen(s2,3).
+\end{verbatim}
+\end{enumerate}
+
+A FSM is said to accept a string if it executes in the following way:
+it starts in the initial state, and makes a transition to the next
+state along a path labeled by the symbol it is looking at.  It
+consumes that symbol and then makes another transition based on the
+next symbol in the string.  It continues in this way until all symbols
+are consumed, and if the machine is then in a final state, the string
+is accepted; otherwise it is rejected.  If there is an
+epsilon-transition from one state to another, the machine can make
+such a transition without consuming a symbol of the input.
+
+Now we can easily write a specification in XSB that defines when a
+machine accepts a string, as follows:
+\begin{verbatim}
+:- auto_table.
+
+% A machine accepts a string if the machine starts in the initial state,
+%    recognizes the string, ending in a final state and has consumed the
+%    entire string.
+accept(MachineName,StringName) :- mis(MachineName,StateStart),
+        recognize(MachineName,StringName,StateStart,StateFinal,0,StringFinal),
+        mfs(MachineName,StateFinal),
+        stringlen(StringName,StringFinal).
+
+% recognize(MachineName,StringName,MState0,MState,SLoc0,SLoc) is true
+% if machine MachineName started in state MState0 can transition to
+% state MState by recognizing the substring from location SLoc0 to SLoc
+% of the string named StringName.
+
+% The empty input string
+recognize(_,_,MState,MState,SLoc,SLoc).
+% regular transitions
+recognize(MachineName,StringName,MState0,MState,SLoc0,SLoc) :-
+        string(StringName,SLoc0,Symbol,SLoc1),
+        m(MachineName,MState0,Symbol,MState1),
+        recognize(MachineName,StringName,MState1,MState,SLoc1,SLoc).
+% Epsilon transitions
+recognize(MachineName,StringName,MState0,MState,SLoc0,SLoc) :-
+        m(MachineName,MState0,'',MState1),
+        recognize(MachineName,StringName,MState1,MState,SLoc0,SLoc).
+\end{verbatim}
+
+The definition of \verb|accept| says that a machine accepts a string
+if StateStart is the initial state of the indicated machine, and the
+machine transits from StateStart to StateFinal while recognizing the
+string starting from 0 and ending at StringFinal, and StateFinal is a
+final state of the machine, and StringFinal is the length of the
+string.
+
+The definition of \verb|recognize/6| describes how a machine moves
+through its states while recognizing (or generating) a sequence of
+symbols.  The first clause says that for any machine and any string,
+when the machine stays in the same state, no symbols of the string are
+processed.  The second clause says that a machine moves from MState0
+to MState recognizing a substring if the next symbol in the substring
+is Symbol, and there is a transition of the current machine on that
+Symbol that takes the machine from MState0 to MState1, and the machine
+recognizes the rest of the substring from that state MState1 getting
+to MState.  The third clause handles epsilon transitions; it says that
+a machine moves from MState0 to MState recognizing a substring if
+there is an epsilon transition from MState0 to a MState1 and the
+machine recognizes the entire string from MState1 to MState.
+
+For example, accept(m0s1s2s,s1) succeeds, but accept(m0s1s2s,s2)
+fails:
+\begin{verbatim}
+warren% xsb
+XSB Version 1.6.0 (96/6/15)
+[sequential, single word, optimal mode]
+| ?- [automata].
+[automata loaded]
+
+yes
+| ?- accept(m0s1s2s,s1).
+++Warning: Removing incomplete tables...
+
+yes
+| ?- accept(m0s1s2s,s2).
+
+no
+| ?- 
+\end{verbatim}
+
+This is a right-recursive definition of \verb|recognize/6|, so it
+might seem that this should not need tabling.  And indeed for this
+particular machine and string, Prolog would evaluate this definition
+just fine.  However, there are machines for which tabling is required.
+Can you give an example of such a machine?
+
+Also, it is possible to give this specification in a left-recursive
+manner.  That is also an exercise for the reader.
+
+\subsection{Intersection of FSM's}
+
+Given two FSM's, one can ask the question as to whether there is a
+string that both machines accept, that is, whether the intersection of
+the languages accepted by the two machines is non-empty.
+
+This turns to be possible, and not very difficult.  As a matter of
+fact, we've already essentially written a program that does this.  You
+might have noticed that our representations of strings and machines
+are actually very similar.  In fact, a string can be understood as a
+FSM, simply by viewing the string/4 predicate as a machine transition
+predicate.  In this case the string's states are integers, the initial
+state is 0 and the final state is the string length.  Viewed this way,
+a string is simply a FSM that recognizes exactly that one string.
+
+Viewed in this way, the \verb|accept/2| predicate above, which we wrote
+as determining whether a FSM accepts a string, can be trivially
+modified to determine whether two machines accept languages with a
+non-empty intersection.  We leave it to the reader to modify the
+definition of \verb|accept/2| to check intersection, and to test it
+with several examples.
+
+\subsection{Epsilon-free FSM's}
+
+Two FSM's are said to be {\em equivalent} if they accept exactly the
+same set of strings.  Given any nondeterministc FSM, it is always
+possible to find an equivalent one that has {\em no} epsilon
+transitions.  In fact, given a machine as defined and represented
+above, we can easily define such an equivalent epsilon-free machine.
+So given a machine named {\em mach} and defined in m/4, mis/2 and
+mfs/2, we will define the transitions, initial state and final state
+for its epsilon-free version named {\em efree(mach)} as follows:
+
+\begin{verbatim}
+% epsilon-free machines
+
+% first define emoves as any sequence of epsilon transitions
+emoves(_,State,State).
+emoves(Mach,State0,State) :-
+        emoves(Mach,State0,State1),
+        m(Mach,State1,'',State).
+
+
+% define the transition relation of the efree machine
+m(efree(Mach),State,Symbol,TargState) :-
+        emoves(Mach,State,State1),
+        m(Mach,State1,Symbol,State2),
+        Symbol \== '',
+        emoves(Mach,State2,TargState).
+
+% define the initial and final states of the efree machine
+mis(efree(Mach),IS) :- mis(Mach,IS).
+mfs(efree(Mach),FS) :- mfs(Mach,FS1),emoves(Mach,FS,FS1).
+mfs(efree(Mach),FS) :- mfs(Mach,FS1),emoves(Mach,FS1,FS).
+\end{verbatim}
+
+The predicate \verb|emoves/3| defines for any machine the set of pairs
+of states such that the machine can move from the first state to the
+second state without consuming any symbols in the input string.  Then
+with this definition, the rule defining transitions says that an
+epsilon-free machine can move from State to TargState on Symbol if it
+can move from State to State1 using only epsilon moves, can move from
+State1 to State2 on seeing Symbol (which is {\em not} epsilon) and can
+make epsilon moves from State2 to TargState.
+
+The initial state of the epsilon-free machine is exactly the initial
+state of the original machine.  The final state of the epsilon-free
+machine is any state from which you can get to a final state of the
+original machine using only epsilon transitions, or any state you can
+get to from a final state using only epsilon transitions.
+
+For example:
+\begin{verbatim}
+warren% xsb
+XSB Version 1.6.0 (96/6/15)
+[sequential, single word, optimal mode]
+| ?- [automata].
+[automata loaded]
+
+yes
+| ?- m(efree(m0s1s2s),So,Sym,Ta),writeln(m(efree(m0s1s2s),So,Sym,Ta)),fail.
+m(efree(m0s1s2s),q0,0,q0)
+m(efree(m0s1s2s),q0,0,q1)
+m(efree(m0s1s2s),q0,0,q2)
+m(efree(m0s1s2s),q1,1,q1)
+m(efree(m0s1s2s),q1,1,q2)
+m(efree(m0s1s2s),q2,2,q2)
+m(efree(m0s1s2s),q0,1,q2)
+m(efree(m0s1s2s),q0,1,q1)
+m(efree(m0s1s2s),q1,2,q2)
+m(efree(m0s1s2s),q0,2,q2)
+
+no
+| ?- mis(efree(m0s1s2s),IS),writeln(mis(efree(m0s1s2s),IS)),fail.
+mis(efree(m0s1s2s),q0)
+
+no
+| ?- mfs(efree(m0s1s2s),FS),writeln(mfs(efree(m0s1s2s),FS)),fail.
+mfs(efree(m0s1s2s),q2)
+mfs(efree(m0s1s2s),q0)
+mfs(efree(m0s1s2s),q1)
+
+no
+| ?- 
+\end{verbatim}
+
+The diagram for \verb|efree(m0s1s2s)| is shown in Figure
+\ref{efreem0s1s2s}.
+
+\begin{figure}
+\centerline{\epsfbox{figures/efreem0s1s2s.eps}}
+\caption{The finite state machine: efree(m0s1s2s)}\label{efreem0s1s2s}
+\end{figure}
+
+
+\subsection{Deterministic FSM's}
+
+A deterministic FSM is a machine such that for every state for any
+symbol there is at most one transition from that state labeled with
+that symbol (and there are no epsilon transitions.)  This means that
+there is never a choice in how the machine is to proceed when it sees
+a symbol: there will be at most one state to move to, given that
+symbol.  The question arises as to whether given an arbitrary FSM
+there is always an equivalent deterministic FSM, i.e., a deterministic
+FSM that accepts the same language, i.e., exactly the same set of
+strings.
+
+The answer turns out to be ``yes'', and it is not difficult to see
+why.  Given a nondeterministic (ND) machine, we can construct a
+deterministic machine each of whose states corresponds to a set of
+states in the nondeterministic machine.  The idea is that, after
+seeing a string, the deterministic machine will be in a state
+corresponding to a set of ND states just in case the ND FSM could be
+in any one of the ND states after seeing the same string.  As a very
+trivial example, say we had a ND machine with three states: $q1$,
+$q2$, $q3$, with $q1$ the initial state and transitions from $q1$ to
+$q2$ on symbol $a$ and from $q1$ to $q3$ also on $a$.  Then the
+deterministic machine would have two states, $\{q1\}$ and $\{q2,q3\}$
+(each being a set of the original machine's states), and a transition
+from the first to the second on symbol $a$.
+
+The following specification describes this construction.  Rather than
+constucting {\em all} the states (which would necessarily be
+exponential in the number of states in the nondeterministic machine),
+we will only construct those that are reachable from the initial
+state.  This may be a much smaller number.  Also, for this particular
+specification to be constructive, we need to constrain the set of
+possible deterministic states in some way, and this seems a good way.
+
+We will assume that the machine is an epsilon-free machine.  If
+\verb|efreemach| is the name of an epsilon-free machine then
+\verb|det(efreemach)| is the name of an equivalent deterministic
+machine. 
+
+\begin{verbatim}
+:- import member/2 from basics.
+:- import tsetof/3 from setof.
+
+% Assume Mach is an epsilon-free machine.
+% A state is reachable if it is the initial state or if it can be 
+%   reached by one step from a reachable state.
+reachable(Mach,S) :- mis(Mach,S).
+reachable(Mach,S) :- reachable(Mach,S1),m(Mach,S1,_,S).
+
+% The next state of the deterministic machine given a state and symbol
+%   is the set of states of the nondeterministic machine which are a 
+%   next state starting from some element of the current state of the
+%   deterministic machine. (Mach is assumed to be epsilon-free.)
+m(det(Mach),State0,Sym,State) :- 
+    reachable(det(Mach),State0),
+    tsetof(NDS, a_next(Mach,State0,Sym,NDS), State).
+
+% A state is a next state if it is a next state reachable in one step
+%   from some member of the current state of the deterministic machine.
+a_next(Mach,DState,Sym,NDState) :- 
+    member(S1,DState),
+    m(Mach,S1,Sym,NDState).
+
+% The initial state is the singleton set consisting of the initial 
+%   state of the nondeterministic machine.
+mis(det(Mach),[IS]) :- mis(Mach,IS).
+
+% A final state is a reachable deterministic state that contains some
+%   final state.of the nondeterministic machine.
+mfs(det(Mach),FS) :- mfs(Mach,NFS), reachable(det(Mach),FS),member(NFS,FS).
+\end{verbatim}
+
+Now we can use this specification to find a deterministic machine that
+is equivalent to the nondeterministic machine $m0s1s2s$:
+\begin{verbatim}
+| ?- m(det(efree(m0s1s2s)),S,Sy,T),writeln(m(det(m0s1s2s),S,Sy,T)),fail.
+m(det(m0s1s2s),[q0],0,[q0,q1,q2])
+m(det(m0s1s2s),[q0],1,[q1,q2])
+m(det(m0s1s2s),[q0],2,[q2])
+m(det(m0s1s2s),[q0,q1,q2],0,[q0,q1,q2])
+m(det(m0s1s2s),[q0,q1,q2],1,[q1,q2])
+m(det(m0s1s2s),[q0,q1,q2],2,[q2])
+m(det(m0s1s2s),[q1,q2],1,[q1,q2])
+m(det(m0s1s2s),[q1,q2],2,[q2])
+m(det(m0s1s2s),[q2],2,[q2])
+
+no
+| ?- mis(det(efree(m0s1s2s)),S),writeln(mis(det(m0s1s2s),S)),fail.
+mis(det(m0s1s2s),[q0])
+
+no
+| ?- mfs(det(efree(m0s1s2s)),S),writeln(mfs(det(m0s1s2s),S)),fail.
+mfs(det(m0s1s2s),[q1,q2])
+mfs(det(m0s1s2s),[q0,q1,q2])
+mfs(det(m0s1s2s),[q2])
+mfs(det(m0s1s2s),[q0])
+
+no
+| ?- 
+\end{verbatim}
+
+The diagram for \verb|det(efree(m0s1s2s))| is shown in Figure
+\ref{detm0s1s2s}.
+
+\begin{figure}
+\centerline{\epsfbox{figures/detm0s1s2s.eps}}
+\caption{The finite state machine: det(efree(m0s1s2s))}\label{detm0s1s2s}
+\end{figure}
+
+\subsection{Complements of FSM's}
+
+One may also want to construct a machine that accepts the complement
+of the set of strings a given machine accepts.  This turns out to be
+possible and reasonably easy to do, once we straighten out a minor
+issue.  Up to now we have been mostly ignoring the alphabet of symbols
+that make up the strings.  This has been fine for accepting strings,
+since if a symbol never appears in any transition, the machine can
+never accept any string containing that symbol.  But when we talk
+about strings that a machine rejects, we have to give the alphabet
+with respect to which to take the complement.  For example, what is
+the complement of the language that consists of all strings consisting
+of only $a$'s and $b$'s?  It is the empty set if the alphabet is
+$\{a,b\}$, but if the alphabet is $\{a,b,c\}$, then it is the set of
+all strings over $\{a,b,c\}$ that contain at least one $c$.
+
+Using our current representation, we will assume that the alphabet of
+a given machine is the set of symbols that appear on {\em some}
+transition of that machine.  While this seems to be a reasonable
+assumption, note that it could be incorrect for the second example of
+the complement of all strings of $a$'s and $b$'s given above.  (If we
+were committed to being very precise, we could add an XSB relation
+which for each machine defined the set of symbols in its alphabet.)
+
+The basic idea for generating the complement machine is simply to take
+the original machine but to take the complement of its final states to
+the be final states of the complement-accepting machine.  But there
+are a couple of things we have to guarantee before this works.  First
+the original machine must be deterministic, since otherwise for a
+given string it might end in both a final and a nonfinal state.  In
+this case it should be rejected by the machine accepting the
+complement language, but simply inverting the final and nonfinal
+states would result in it being accepted.  So we will always start
+with a deterministic machine.  Second, we have to be sure that the
+machine gets to some state on {\em every} input.  That is, there must
+always be a transition that can be taken, regardless of the symbol
+being scanned.  That is, every state must have an outgoing transition
+for every symbol in the alphabet.  And here is where the importance of
+the alphabet is clear.
+
+So we will separate our construction into two parts: first we will
+complete the machine (assuming it is deterministic) by adding
+transitions to a new state, called ``sink,'' when there are no
+transitions on some symbols; and second we will complement a completed
+machine.
+
+\begin{verbatim}
+% completed machine
+% A symbol is in the alphabet of a machine if it appears in a non-epsilon 
+%    transition.  (Note that this is our convention and for some machines
+%    could be wrong.)
+alphabet(Mach,Sym) :- 
+    m(Mach,_,Sym,_),
+    Sym \== ''.
+
+% S is a (possibly reachable) state in machine if it's initial or has an
+%    incoming edge.
+is_state(Mach,S) :- m(Mach,_,_,S).
+is_state(Mach,S) :- mis(Mach,S).
+
+% The initial states and final states of the completed machine are the
+%   same as the original machine.
+mis(completed(Mach),IS) :- mis(Mach,IS).
+mfs(completed(Mach),FS) :- mfs(Mach,FS).
+
+% Assume Mach is deterministic
+% There is a transition to ``sink'' if there is no other transition on
+%    this symbol from this state.
+m(completed(Mach),So,Sy,sink) :-
+    is_state(Mach,So),
+    alphabet(Mach,Sy),
+    tnot(isatransition(Mach,So,Sy)).
+% Machine transitions from sink to sink on every symbol
+m(completed(Mach),sink,Sy,sink) :-
+    alphabet(Mach,Sy).
+% Otherwise the same as underlying machine
+m(completed(Mach),So,Sy,Ta) :-
+    m(Mach,So,Sy,Ta).
+	
+% There is a transition if there's a state it transits to.
+isatransition(Mach,So,Sy) :-
+    m(Mach,So,Sy,_).
+\end{verbatim}
+
+Now given a completed machine, we can easily generate the complement
+machine simply by interchanging final and nonfinal states:
+
+\begin{verbatim}
+% complement machine
+% Asume machine is completed and deterministic.
+% The transitions of the complement machine are the same.
+m(complement(Mach),So,Sy,Ta) :- m(Mach,So,Sy,Ta).
+
+% The initial state of the complement machine is the same.
+mis(complement(Mach),S) :-  mis(Mach,S).
+
+% A state is a final state of the complement if it is NOT the final state
+%    of the underlying machine.
+mfs(complement(Mach),S) :- 
+    is_state(Mach,S),
+    tnot(mfs(Mach,S)).
+\end{verbatim}
+
+With these definitions, we can compute the complement of our simple
+machine m0s1s2s:
+\begin{verbatim}
+| ?- [automata].
+[automata loaded]
+
+yes
+| ?- m(complement(completed(det(efree(m0s1s2s)))),S,Sy,T),
+     writeln(m(complement(m0s1s2s),S,Sy,T)),fail.
+m(complement(m0s1s2s),[q2],1,sink)
+m(complement(m0s1s2s),[q2],0,sink)
+m(complement(m0s1s2s),[q1,q2],0,sink)
+m(complement(m0s1s2s),sink,2,sink)
+m(complement(m0s1s2s),sink,1,sink)
+m(complement(m0s1s2s),sink,0,sink)
+m(complement(m0s1s2s),[q1,q2],2,[q2])
+m(complement(m0s1s2s),[q1,q2],1,[q1,q2])
+m(complement(m0s1s2s),[q0,q1,q2],2,[q2])
+m(complement(m0s1s2s),[q0,q1,q2],1,[q1,q2])
+m(complement(m0s1s2s),[q0,q1,q2],0,[q0,q1,q2])
+m(complement(m0s1s2s),[q2],2,[q2])
+m(complement(m0s1s2s),[q0],2,[q2])
+m(complement(m0s1s2s),[q0],1,[q1,q2])
+m(complement(m0s1s2s),[q0],0,[q0,q1,q2])
+
+no
+| ?- mis(complement(completed(det(efree(m0s1s2s)))),S),
+     writeln(mis(complement(m0s1s2s),S)),fail.
+mis(complement(m0s1s2s),[q0])
+
+no
+| ?- mfs(complement(completed(det(efree(m0s1s2s)))),S),
+     writeln(mfs(complement(m0s1s2s),S)),fail.
+mfs(complement(m0s1s2s),sink)
+
+no
+| ?- 
+\end{verbatim}
+
+Given these definitions, we can now write a specification that
+determines when two machines accept the same language.  With
+complement and intersection, we can define subset: $A \subseteq B \iff
+A \cap \overline{B} = \emptyset$.  We leave it as an exercise for the
+reader to write and test such a specification.
+
+\subsection{Minimization of FSM's}
+
+Another question of interest is whether a given FSM has ``redundant''
+states.  That is, is it as small as it can be or is there a smaller
+machine, i.e., one with fewer states, that can recognize the same
+language.
+
+So the idea is, given a machine, to see whether it has redundant
+states.  The first step is to determine whether two states in the
+machine are distinguishable, i.e., whether there is some string such
+that when the machine is started in the respective states, one
+computation will lead to an accepting state and the other won't.  The
+following specification defines (and computes) distinguishable states.
+\begin{verbatim}
+% Assume Mach is a deterministic machine
+% S1 and S2 are distinquishable if S1 is final and S2 is not.
+distinguishable(Mach,S1,S2) :-
+        mfs(Mach,S1),
+        is_state(Mach,S2),
+        tnot(mfs(Mach,S2)).
+% S1 and S2 are distinquishable if S2 is final and S1 is not.
+distinguishable(Mach,S1,S2) :-
+        mfs(Mach,S2),
+        is_state(Mach,S1),
+        tnot(mfs(Mach,S1)).
+% S1 and S2 are distinguishable if some symbol Sy takes them to states that
+%    are distinguishable.
+distinguishable(Mach,S1,S2) :-
+        m(Mach,S1,Sy,T1),
+        m(Mach,S2,Sy,T2),
+        distinguishable(Mach,T1,T2).
+\end{verbatim}
+
+The first two rules say that states are distinguishable if one is
+final and the other is not.  For this we need the constraint that the
+initial machine be deterministic.  The third rule says that states are
+distinguishible if there is a symbol on which they make transitions to
+distinguishable states.
+
+As an example of finding distinguishable states, we can use the
+following machine:
+\begin{verbatim}
+m(dfa,a,0,b).
+m(dfa,a,1,f).
+m(dfa,b,0,g).
+m(dfa,b,1,c).
+m(dfa,c,0,a).
+m(dfa,c,1,c).
+m(dfa,d,0,c).
+m(dfa,d,1,g).
+m(dfa,e,0,h).
+m(dfa,e,1,f).
+m(dfa,f,0,c).
+m(dfa,f,1,g).
+m(dfa,g,0,g).
+m(dfa,g,1,e).
+m(dfa,h,0,g).
+m(dfa,h,1,c).
+
+mis(dfa,a).
+mfs(dfa,c).
+\end{verbatim}
+(draw a picture.  Could also use the determistic version of ms0s1s2,
+since it has an extra state {q0}, I think.)
+
+And with this machine we get the following evaluation:
+\begin{verbatim}
+| ?- distinguishable(dfa,S1,S2),S1@<S2,writeln(d(S1,S2)),fail.
+d(d,e)
+d(d,g)
+d(d,h)
+d(b,d)
+d(b,e)
+d(b,f)
+d(b,g)
+d(b,c)
+d(a,b)
+d(a,d)
+d(a,f)
+d(a,g)
+d(a,h)
+d(a,c)
+d(f,g)
+d(f,h)
+d(e,f)
+d(e,g)
+d(e,h)
+d(g,h)
+d(c,d)
+d(c,e)
+d(c,h)
+d(c,g)
+d(c,f)
+
+no
+| ?- 
+\end{verbatim}
+
+In the query we filtered to keep only the cases in which the first
+state has a smaller name than the second.  This was just to avoid
+printing out all the commutative and reflexive pairs.
+
+What is more interesting than finding two states that are
+distinguishable is finding two states that are {\bf not}
+distinguishable.  In this case one of the states is unnecessary and
+can be eliminated from the machine.  So using this definition of
+\verb|distinguishable|, we can construct a minimal DFSM that accepts
+the language given by a machine by merging indistinguishable states in
+that machine.
+\begin{verbatim}
+% min (assuming the machine is deterministic), reduce by
+%   indistinguishability. 
+m(min(Mach),So,Sy,Ta) :-
+    reachable(min(Mach),So),  % So is a set of indistinguishable states
+    member(Ss,So),            % Ss is one of them..
+    m(Mach,Ss,Sy,T),          % ..that can transit to T on Symbol Sy
+    tsetof(S,indistinguishable(Mach,T,S),Ta).  % target is those indistinguishable from T
+
+% The initial (final) state is the set of states indistinguishable
+%   from the initial (final) state of the base machine. 
+mis(min(Mach),IS) :-
+    mis(Mach,Bis),
+    tsetof(S,indistinguishable(Mach,Bis,S),IS).
+mfs(min(Mach),FS) :-
+    mfs(Mach,Bfs),
+    tsetof(S,indistinguishable(Mach,Bfs,S),FS).
+
+indistinguishable(Mach,S1,S2) :-
+    is_state(Mach,S1),
+    is_state(Mach,S2),
+    tnot(distinguishable(Mach,S1,S2)).
+\end{verbatim}
+
+And executing this with the previous example, we get:
+\begin{verbatim}
+| ?- m(min(dfa),S,Sy,T),writeln(m(min(dfa),S,Sy,T)),fail.
+m(min(dfa),[a,e],1,[f])
+m(min(dfa),[a,e],0,[b,h])
+m(min(dfa),[f],1,[g])
+m(min(dfa),[f],0,[c])
+m(min(dfa),[b,h],1,[c])
+m(min(dfa),[b,h],0,[g])
+m(min(dfa),[g],1,[a,e])
+m(min(dfa),[g],0,[g])
+m(min(dfa),[c],1,[c])
+m(min(dfa),[c],0,[a,e])
+
+no
+| ?- mfs(min(dfa),S),writeln(mfs(min(dfa),S)),fail.
+mfs(min(dfa),[c])
+
+no
+| ?- mis(min(dfa),S),writeln(mis(min(dfa),S)),fail.
+mis(min(dfa),[a,e])
+
+no
+| ?- 
+\end{verbatim}
+(Draw state diagram) Note that the state ``d'' does not appear in this
+collapsed machine.  This is because it has no in-transitions and is
+not the initial state, so it doesn't appear in our reduction.  It is
+actually equivalent to state ``f'', and could be merged with it.
+
+\subsection{Regular Expressions}
+
+Regular expressions are another way of specifying finite state
+languages, that is sets of strings of symbols.  A regular expression
+over an alphabet $\Sigma$ is:
+\begin{enumerate}
+\item
+a symbol from $\Sigma$, or
+\item
+an expression $(RE1*RE2)$, where $RE1$ and $RE2$ are regular expressions, or
+\item
+an expression $(RE1+RE2)$, where $RE1$ and $RE2$ are regular expressions, or
+\item
+an expression $@(RE)$, where $RE$ is a regular expression.
+\end{enumerate}
+
+We associate with each regular expression (RE) a set of strings over
+$\Sigma$ (i.e., a language.)  We will use XSB (Prolog) rules to define
+the set of strings associated with a RE.  An RE will be represented as
+a Prolog term, and the definition below shows that we are using $*$
+for concatentation, $+$ for alternation, and $@$ for iteration.
+
+The following program, when given a regular expression, accepts
+strings that are in the language represented by that expression:
+
+\begin{verbatim}
+% Is StringName in the language represented by Exp?
+reacc(Exp,StringName) :-
+    reacc(Exp,StringName,0,F),
+    stringlen(StringName,F).
+
+% An atom represents itself
+reacc(A,S,From,To) :- atomic(A),string(S,From,A,To).
+% Concatenation of E1 and E2 
+reacc((E1*E2),S,From,To) :-
+    reacc(E1,S,From,M),
+    reacc(E2,S,M,To).
+% Alternation 
+reacc((E1+_E2),S,From,To) :- reacc(E1,S,From,To).
+reacc((_E1+E2),S,From,To) :- reacc(E2,S,From,To).
+% Iteration if 0 or more occurrences
+reacc(@(_E),_S,From,From).
+reacc(@(E),S,From,To) :-
+    reacc(@(E),S,From,Mid),
+    reacc(E,S,Mid,To).
+\end{verbatim}
+
+Now we can test whether string s1 (00112) is in the language
+represented by the regular expression $@(0)* @(1)* @(2)$:
+\begin{verbatim}
+| ?- reacc(@(0)* @(1)* @(2),s1).
+++Warning: Removing incomplete tables...
+
+yes
+| ?- 
+\end{verbatim}
+and it is.
+
+THIS FOLLOWING DEVELOPMENT OF FSMs FROM REs IS INCORRECT.  IT
+CONFLATES MULTIPLE OCCURRENCES OF THE SAME RE SUBEXPRESSION.  FIX OR
+DELETE!!!!  -DSW
+
+It turns out that regular expressions represent exactly the same
+languages that finite state machines do.  Given a regular expression,
+we can construct a finite state machine that recognizes the same
+language (and vice versa.)  So first we will construct a machine given
+a regular expression.  To make the construction easy, we will
+represent machine names and states in an interesting way.  Given a
+regular expression RE, we will use m(RE) to name the machine for
+recognizing the same langauge as RE.  And the initial state for the
+constructed machine that recognizes the language of RE will be named
+i(RE) and the final state (there will always be exactly one in our
+construction) will be f(RE).  Note that we are free to name the
+machines and states anything we want, so this choice is simply a
+convenience.
+
+The following rules define the FSM given a regular expression:
+\begin{verbatim}
+% The machine for an atomic RE, simply transits from its initial state
+%    to its final state on the given atomic symbol.
+%    (All the others will be epsilon transitions.)
+m(re(RE),i(RE),RE,f(RE)) :- atomic(RE).
+
+% To recognize concatenated expressions:
+% Connect the initial state of the compound expr to the initial state of
+%    the first subexpr.
+m(re(RE1*RE2),i(RE1*RE2),'',i(RE1)).
+
+% Connect the final state of the first subexpr to the initial state of
+%     the second subexpr.
+m(re(RE1*RE2),f(RE1),'',i(RE2)).
+
+% Connect the final state of the second subexpr to the final state of
+%     the compound expr.
+m(re(RE1*RE2),f(RE2),'',f(RE1*RE2)).
+
+% And finally must add the transitions of the machines for the 
+%    subexpressions.
+m(re(RE1*_RE2),S,Sy,T) :- m(re(RE1),S,Sy,T).
+m(re(_RE1*RE2),S,Sy,T) :- m(re(RE2),S,Sy,T).
+
+% The process is analogous for alternation.
+m(re(RE1+RE2),i(RE1+RE2),'',i(RE1)).
+m(re(RE1+RE2),i(RE1+RE2),'',i(RE2)).
+m(re(RE1+RE2),f(RE1),'',f(RE1+RE2)).
+m(re(RE1+RE2),f(RE2),'',f(RE1+RE2)).
+m(re(RE1+_RE2),S,Sy,T) :- m(re(RE1),S,Sy,T).
+m(re(_RE1+RE2),S,Sy,T) :- m(re(RE2),S,Sy,T).
+
+% and for iteration
+m(re(@(RE)),i(@(RE)),'',f(@(RE))).
+m(re(@(RE)),i(@(RE)),'',i(RE)).
+m(re(@(RE)),f(RE),'',f(@(RE))).
+m(re(@(RE)),f(@(RE)),'',i(@(RE))).
+m(re(@(RE)),S,Sy,T) :- m(re(RE),S,Sy,T).
+
+% and the initial and final states are just those named i() and f().
+mis(re(RE),i(RE)).
+mfs(re(RE),f(RE)).
+\end{verbatim}
+
+As an example, consider the following execution
+\begin{verbatim}
+| ?- m(re(a*b*c),S,Sy,T),writeln(m(re(a*b*c),S,Sy,T)),fail.
+m(re(a * b * c),i(a * b * c),,i(a * b))
+m(re(a * b * c),f(a * b),,i(c))
+m(re(a * b * c),f(c),,f(a * b * c))
+m(re(a * b * c),i(a * b),,i(a))
+m(re(a * b * c),f(a),,i(b))
+m(re(a * b * c),f(b),,f(a * b))
+m(re(a * b * c),i(a),a,f(a))
+m(re(a * b * c),i(b),b,f(b))
+m(re(a * b * c),i(c),c,f(c))
+
+no
+| ?- m(det(efree(re(a*b*c))),S,Sy,T),writeln(m(re(a*b*c),S,Sy,T)),fail.
+m(re(a * b * c),[i(a * b * c)],a,[f(a),i(b)])
+m(re(a * b * c),[f(a),i(b)],b,[f(b),f(a * b),i(c)])
+m(re(a * b * c),[f(b),f(a * b),i(c)],c,[f(c),f(a * b * c)])
+
+no
+| ?- 
+\end{verbatim}
+
+Here we first constructed the FSM that recognizes the single string
+$abc$, which has 9 transitions, most of them epsilon transitions.  In
+the second query, we found the deterministic version of that machine.
+Notice that this dropped the number of transitions to the minimal
+three.
+
+The final problem concerning FSM's and regular expressions that we
+will consider is that of, given a machine, constructing an equivalent
+regular expression.
+
+\begin{verbatim}
+re(S,T,0,Mach,RE) :- is_state(S),is_state(T),S\==T,tsetof(Sy,m(Mach,S,Sy,T),RE).
+re(S,S,0,Mach,[''|RE]) :- is_state(S),tsetof(Sy,m(Mach,S,Sy,T),RE).
+re(I,J,K,Mach,[RE1* @(RE2) * RE3,RE4]) :- K>0,
+    K1 is K-1,
+    re(I,K,K1,Mach,RE1),
+    re(K,K,K1,Mach,RE2),
+    re(K,J,K1,Mach,RE3),
+    re(I,J,K1,Mach,RE4).
+
+
+\end{verbatim}
+
+
+\section{Grammars Revisited}
+In a previous chapter we explored how we could represent grammars in
+tabled Prolog and obtain efficient recognition algorithms.  Recall the
+Prolog program from the DCG for the expression context-free grammer:
+\begin{verbatim}
+% file grammar.P
+:- table expr/3, term/3.
+
+expr(S0,S) --> expr(S0,S1), word(S1,+,S2), term(S2,S).
+expr(S0,S) --> term(S0,S).
+term(S0,S) --> term(S0,S1), word(S1,*,S2), primary(S2,S).
+term(S0,S) --> primary(S0,S).
+primary(S0,S) --> word(S0,'(',S1), expr(S1,S2), word(S2,')'S).
+primary(S0,S) --> word(S0,Int,S1), integer(Int).
+\end{verbatim}
+We understood a grammar rule, for example the first one, as saying
+that an expr generated a string from position S0 to S in the input
+string if an expr generated a string from position S0 to S1 and the
+word '+' spanned from positions S1 to S2, and a term spanned from
+position S2 to S.  
+
+There is another way to understand DCG rules declaratively.  Recall
+that we can consider the input string word/3 representation as a
+simple FSA, that recognizes exactly the input string.  The first
+string position is the initial state, the last string position is the
+accepting state, and the word facts define the state transitions.  We
+can think of the DCG rules as add new transitions, on new symbols
+(nonterminal symbols) to that basic (linear) FSA.  An atomic formula,
+such as expr(S0,S) defines a transition from state S0 to S on the
+symbol 'expr'.  Then we can understand a rule, for example the first
+one, as saying that if there is a transition from state S0 to S1 on
+the symbol 'expr', and from state S1 to S2 on '+' and from state S2 to
+S on 'term', then there is a transition from state S0 to S on 'expr'.
+So the grammar rules (along with the facts of the initial string) can
+be understood as defining a finite state automoton.  The initial set
+of word/3 facts defines the initial transitions of the FSA (on
+terminal symbols) and the DCG rules define further transitions (on
+nonterminal symbols).  The first state of string is the initial state
+of the FSA and the last state of the string is the final, accepting
+state of the FSA.
+
+So the question is: What strings does the defined FSA accept?  The
+answer is all sentential forms (i.e., strings of terminals and
+nonterminals) that can eventually generate the given initial string of
+terminals.  So the query expr(InitialState,FinalState) is true just in
+case the sentential form consisting of the single nonterminal 'expr'
+can generate the initial input string.  I.e., if the initial string is
+in the language generated by expr.
+
+So all of this is just a slightly different way to understand what a
+DCG specifies, i.e., how a DCG specifies a language.
+
+Looked at this way, we can specify the facts specifying the input
+string using existential variables, for example the string $1+2$, as
+follows:
+\begin{verbatim}
+exists(S1,exists(S2,exists(S3,exists(S4,
+  initial_state(S1)/\word(S1,1,S2)/\word(S2,+,S3)
+       /\word(S3,2,S4)/\final_state(S4)))))
+\end{verbatim}
+and a rule, such as the first one is:
+\begin{verbatim}
+forall(S0,forall(S,exists(S1,exists(S2,
+    expr(S0,S1)/\word(S1,+,S2)/\term(S2,S)))))
+\end{verbatim}
+
+Then the DCG rules define further transitions in this FSA, and the
+goal:
+\begin{verbatim}
+| ?- initial_state(S0),final_state(S),expr(S0,S).
+\end{verbatim}
+is true just in case there is a transition from the initial state to
+the final state labeled by 'expr'.
+
+Understood this way, it is easy to see how to extend DCG's to express
+context-sensitive grammars.  Recall that grammar rules define
+transitions in a FSA that recognizes sentential forms that generate
+the input string.  Given a context sensitive rule such as:
+\begin{verbatim}
+AB --> CD.
+\end{verbatim}
+we want to define a new pair of transitions on A and then on B, if
+there already are transitions on C and D.  We can say this logically
+with the formula:
+\begin{verbatim}
+forall(S0,forall(S,thereis(S1,'A'(S0,S1)/\'B'(S1,S)) --> 
+              thereis(S3,'C'(S0,S3)/\'D'(S3,S))))
+\end{verbatim}
+So this rule asserts the (conditional) existence of a state (with
+variable S1) and two transitions.  In our extended Prolog, this is the
+rule:
+\begin{verbatim}
+S3 ^ (c(S0,S3),D(S3,S)) :- a(S0,S1),B(S1,S).
+\end{verbatim}
+
+
+\section{Push-Down Automata}

@@ -1,0 +1,79 @@
+/* parse with tabling to get a lr(k)-like algorithm.  This passes a
+single follow-ing string instead of a set of strings as follows. */
+
+:- import length/2,append/3,member/2 from basics.
+at :- abolish_all_tables.
+
+:- table parse/4.
+parse(Sym,Follow,Str0,Str) :-
+	word(Str0,Sym,Str),
+	next_str(Follow,Str).
+parse(Sym,Follow,Str0,Str) :-
+	rule(Sym,RB),
+	parseSF(RB,Follow,Str0,Str),
+	writeln(p((Sym-->RB),Str0,Str)).
+
+parseSF([],Follow,Str,Str) :- 
+	next_str(Follow,Str).
+parseSF([Sym|SF],Follow,Str0,Str) :- 
+	firstK(SF,Follow,SymFollow),
+	parse(Sym,SymFollow,Str0,Str1),
+	parseSF(SF,Follow,Str1,Str).
+
+next_str([],_).
+next_str(['$'|_],S) :- \+ word(S,_,_).  % end of string
+next_str([Sym|Syms],S) :- word(S,Sym,S1),next_str(Syms,S1).
+
+:- table firstK/3.
+% firstK(+SF,+Follow,-First), where K = length(Follow)
+firstK([],Follow,Follow).
+firstK([Sym|SF],Follow,First) :-
+	firstK(SF,Follow,SymFollow),
+	(nonterminal(Sym)
+	 ->	rule(Sym,Body),
+		firstK(Body,SymFollow,First)
+	 ;	append(FirstT,[_],SymFollow),
+		First = [Sym|FirstT]
+	).
+
+nonterminal(S) :- rule(S,_),!.
+
+%%| ?- parse(s,['$','$'],0,14),writeln(yes),fail.
+
+/* S -> A B.
+   A -> aA | a.
+   B -> Bb | b.
+
+rule(s,[an,bn]).
+rule(an,[a,an]).
+rule(an,[a]).
+rule(bn,[bn,b]).
+rule(bn,[b]).
+
+word(0,a,1).
+word(1,a,2).
+word(2,a,3).
+word(3,a,4).
+word(4,a,5).
+word(5,a,6).
+word(6,a,7).
+word(7,a,8).
+word(8,a,9).
+word(9,a,10).
+word(10,a,11).
+word(11,a,12).
+word(12,b,13).
+word(13,b,14).
+%word(14,'$',15).
+%word(15,'$',16).
+*/
+
+rule(e,[e,+,t]).
+rule(e,[e,-,t]).
+rule(e,[t]).
+rule(t,[t,*,f]).
+rule(t,[t,/,f]).
+rule(t,[f]).
+rule(f,[n]).
+rule(f,['(',e,')']).
+

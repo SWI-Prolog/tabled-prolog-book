@@ -1,0 +1,21 @@
+\begin{thebibliography}{1}
+
+\bibitem{DRRSSSW94}
+S.~Dawson, C.~R. Ramakrishnan, I.~V. Ramakrishnan, K.~Sagonas, S.~Skiena,
+  T.~Swift, and D.~S. Warren.
+\newblock Unification factoring for efficient execution of logic programs.
+\newblock In {\em Proc. of the 22nd Symp. on Principles of Programming
+  Languages}. ACM, 1995.
+
+\bibitem{GaJo79}
+M.~Garey and D.~Johnson.
+\newblock {\em Computers and Intractability: A Guide to the Theory of
+  NP-Completeness}.
+\newblock W.H. Freeman and Company, 1979.
+
+\bibitem{HM89}
+T.~Hickey and S.~Mudambi.
+\newblock Global compilation of {Prolog}.
+\newblock {\em Journal of Logic Programming}, 7:193--230, 1989.
+
+\end{thebibliography}

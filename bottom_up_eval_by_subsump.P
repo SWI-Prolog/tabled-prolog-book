@@ -1,0 +1,26 @@
+/* Bottom-up evaluator, using subsumptive tabling,
+when called as interp(X).
+Verify that this is the "linear" bottom-up Horn clause algorithm?
+Note must separate out interp_and to avoid calling interp((X,Y)),
+and generating infinitely many answers.
+*/
+
+:- use_subsumptive_tabling interp/1.
+%:- table interp/1.
+
+interp(true).
+interp(A) :-
+	rule(A,B),
+	interp_and(B),
+	writeln(succeed(A)).
+
+interp_and((A,B)) :- !,interp(A),interp_and(B).
+interp_and(A) :- interp(A).
+
+rule(p,(q,r,s)).
+rule(p,(r,t)).
+rule(q,(t,u)).
+rule(t,s).
+rule(s,true).
+rule(u,(t,s)).
+rule(r,u).

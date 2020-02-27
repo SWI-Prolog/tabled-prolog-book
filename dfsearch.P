@@ -1,0 +1,59 @@
+:- import aggregInit/0, bagMin/2 from myaggregs.
+:- import conset/2, conget/2, coninc/1 from prof_sbp.
+
+search(N,C) :- aggregInit, bagMin(search(N,_),C).
+search(N,Co)(Ci) :- 
+	writeln(p(N,Ci)), 
+	findall(M,edge(N,M),L), 
+	Cm is Ci+1,
+	mapsearch(L,Cm,Co).
+
+mapsearch([],C,C).
+mapsearch([N|Ns],Ci,Co) :- magMin(search(N,Cm),Ci), mapsearch(Ns,Cm,Co).
+
+searchbu :- aggregInit, bagMin(search(a),_).
+search(N)(C) :- 
+	conget(ctr,C), coninc(ctr),
+	writeln([N,C]), 
+	findall(M,edge(N,M),L), 
+	mapsearch(L).
+
+mapsearch([]).
+mapsearch([N|Ns]) :- bagMin(search(N),_), mapsearch(Ns).
+
+/*****
+:- table search/1.
+search(N) :- 
+	writeln(N), 
+	findall(M,edge(N,M),L), 
+	mapsearch(L).
+
+mapsearch([]).
+mapsearch([N|Ns]) :- search(N), mapsearch(Ns).
+/*********/
+edge(a,b).
+edge(a,m).
+edge(b,c).
+edge(b,h).
+edge(c,d).
+edge(c,g).
+edge(d,e).
+edge(d,f).
+edge(h,i).
+edge(i,j).
+edge(j,k).
+edge(j,l).
+edge(m,n).
+edge(n,o).
+edge(n,p).
+
+/************/
+edge(e,b).
+edge(f,c).
+edge(g,b).
+edge(h,a).
+edge(k,i).
+edge(l,i).
+edge(n,a).
+edge(p,a).
+/*************/

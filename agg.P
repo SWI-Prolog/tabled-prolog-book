@@ -1,0 +1,143 @@
+testi :- for(I,1,7),nl,for(J,1,7),grid_i(I,J,X),write(X),write('\t'),fail.
+
+:- table grid_i(_,_,lattice(max(_,_,_))).
+grid_i(I,1,X) :-  !, X is I*1000000.
+grid_i(I,7,X) :- !, X is 8000000 - I*1000000.
+grid_i(1,J,X) :- !, X is J*1000000.
+grid_i(7,J,X) :- !, X is 8000000 - J*1000000.
+grid_i(I,J,X) :-
+	Ip1 is I+1, Im1 is I-1,
+	Jp1 is J+1, Jm1 is J-1,
+	grid_i(Ip1,J,X1),
+	grid_i(Im1,J,X2),
+	grid_i(I,Jp1,X3),
+	grid_i(I,Jm1,X4),
+	X is (X1+X2+X3+X4) // 4.
+grid_i(_,_,1000000).
+
+
+
+:- import for/3 from basics.
+
+test :- for(I,1,7),nl,for(J,1,7),grid(I,J,X),write(X),write('\t'),fail.
+
+:- table grid(_,_,lattice(max(_,_,_))).
+
+grid(I,1,X) :-  !, X is float(I).
+grid(I,7,X) :- !, X is 8.0 - float(I).
+grid(1,J,X) :- !, X is float(J).
+grid(7,J,X) :- !, X is 8.0 - float(J).
+grid(I,J,X) :-
+	Ip1 is I+1, Im1 is I-1,
+	Jp1 is J+1, Jm1 is J-1,
+	grid(Ip1,J,X1),
+	grid(Im1,J,X2),
+	grid(I,Jp1,X3),
+	grid(I,Jm1,X4),
+	X is (X1+X2+X3+X4) / 4.
+grid(_,_,1.0).
+
+max(X,Y,M) :- (Y > X -> M = Y ; M = X).
+
+
+
+
+
+
+end_of_file.
+				% shortest path
+
+e(a,b,4).
+e(a,c,7).
+e(b,c,2).
+e(b,d,8).
+e(d,a,1).
+e(d,b,1).
+e(d,e,3).
+e(c,d,1).
+e(c,e,5).
+
+:- table sp(_,_,lattice(min(_,_,_))).
+sp(X,Y,D) :- e(X,Y,D).
+sp(X,Y,D) :- sp(X,Z,D1),e(Z,Y,D2), D is D1+D2.
+
+
+min(X,Y,Min) :- (Y < X -> Min = Y ; Min = X).
+
+
+
+
+
+
+
+
+% simple example of lattice (max)
+
+:- table p_max2(_,lattice(max(_,_,_))).
+
+p_max2(X,Y) :- p(X,Y).
+
+
+
+
+
+
+
+
+
+
+
+
+end_of_file.
+
+
+% simple example of fold(sum)
+p(1,1). p(1,2). p(1,3). p(1,4). p(1,5). p(1,6).
+p(2,2). p(2,4). p(2,6). p(2,8). p(2,10). p(2,12). 
+
+:- table p_sum2(_,fold(sum(_,_,_),0)).
+p_sum2(X,Y) :- p(X,Y).
+
+sum(X,Y,Z) :- Z is X+Y, writeln(sum(X,Y,Z)).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end_of_file.
+
+
+
+
+
+/* A company Cm is said to have bought another company Cs if Cm
+controls more than 50% of the stock of Cs. Cm controls the stock it
+directly owns. Cm also controls stock controlled by any other company
+Cm has bought. */
+
+set_owns(a,b,51.0).
+set_owns(a,c,11.0).
+set_owns(b,c,40.0).
+set_owns(c,d,45.0).
+set_owns(d,a,51.0).
+
+:- table all_controls(_,_,fold(sum(_,_,_),0.0)).
+
+all_controls(Cm, Cs, S) :- set_owns(Cm, Cs, S).
+all_controls(Cm, Cs, S) :- set_bought(Cm, Ci), Cm \== Ci, all_controls(Ci, Cs, S), writeln(ac(Cm,Cs,S,Ci)).
+
+set_bought(Cm, Cs) :- all_controls(Cm, Cs, S), S > 50.0, writeln(sb(Cm,Cs)).

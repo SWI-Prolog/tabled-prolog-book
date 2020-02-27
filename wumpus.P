@@ -1,0 +1,62 @@
+
+%% grid provides the size of the grid.
+grid(4,4).
+
+%% A neighbor is a square to either side or above or below the current
+%%  square (and still on the grid.)
+neighbor(I,J,NI,J) :- NI is I+1, grid(MI,_), NI =< MI.
+neighbor(I,J,NI,J) :- NI is I-1, NI >= 1.
+neighbor(I,J,I,NJ) :- NJ is J+1, grid(_,MJ), NJ =< MJ.
+neighbor(I,J,I,NJ) :- NJ is J-1, NJ >= 1.
+
+%% feel(I,J,Sense) if the hunter has felt "Sense" on square I,J
+
+:- table feel/3.
+%% the hunter can feel only one of breeze and no_breeze
+feel(I,J,breeze) :- tnot(feel(I,J,no_breeze)).
+feel(I,J,no_breeze) :- tnot(feel(I,J,breeze)).
+
+:- table safe/2.
+%% A square is safe if it is not a pit
+safe(I,J) :- tnot(pit(I,J)).
+%% A square is safe if the hunter has visited it
+safe(I,J) :- visited(I,J).
+%% A square is safe if the hunter feels no breeze on some neighbor.
+safe(I,J) :- 
+	neighbor(I,J,NI,NJ),
+	visited(NI,NJ),
+	feel(NI,NJ,no_breeze).
+
+:- table pit/2.
+%% A square is a pit if it is not safe
+pit(I,J) :- tnot(safe(I,J)).
+%% A square is a pit if some neighbor feels a breeze but no other of
+%% its neighbors is unsafe.
+pit(I,J) :-
+	neighbor(I,J,NI,NJ),
+	feel(NI,NJ,breeze),
+	tnot(another_neighbor_unsafe(NI,NJ,I,J)).
+
+%% Another neighbor (not (NI,NJ) is a pit.
+:- table another_neighbor_unsafe/4.
+another_neighbor_unsafe(I,J,NI,NJ) :-
+	neighbor(I,J,PI,PJ),
+	(PI =\= NI ; PJ =\= NJ),
+	tnot(safe(PI,PJ)).
+
+feel(1,1,breeze).
+feel(1,2,breeze).
+%:- table visited/2.
+visited(1,1).
+visited(1,2).
+
+pq(Query) :-
+	(call(Query),
+	 fail
+	 ;
+	 get_residual(Query,Resid),
+	 writeln(Query:Resid),
+	 fail
+	 ;
+	 true
+	).

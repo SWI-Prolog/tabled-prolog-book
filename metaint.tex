@@ -1,0 +1,253 @@
+\chapter{Meta-Programming}
+
+\section{Meta-Interpreters in XSB}
+
+Meta-interpreters. How one can write meta-interpreters and table them
+and get tabled evaluation.  I.e. tabling ``lifts'' through
+meta-interpreters.
+
+Could do XOLDTNF metainterpreter, exponential, but programmable.
+Probably want to use aggregation.
+
+\subsection{A Metainterpreter for Disjunctive Logic Programs}
+Do disjunctive LP metainterpreter
+
+\subsection{A Metainterpreter for Explicit Negation}
+Do explicit negation metainterpreter.
+
+\section{Abstract Interpretation}
+
+Abstract Interpretation examples.
+        (partial evaluation, and assert.)
+
+Show low overhead of tabling in meta-interpreter, due to how tables
+are implemented as tries.
+
+\subsection{AI of a Simple Nested Procedural Language}
+
+(see ~warren/xsb-tests/procabsint/*)
+
+In this section we will see how to use XSB to construct a simple
+abstract interpreter for a procedural programming language.  Such
+abstract interpreters can be used to do various kinds of data flow
+analyses.  The abstract interpretator that we develop here is actually
+quite sophisticated; for example, it does interprocedural analysis.
+The interesting part here is how easy and straightforward it is to
+construct one with XSB, and therefore how we can be confident of its
+correctness.
+
+The idea is to first construct a concrete interpreter for the object
+language.  The Prolog programming language makes this particularly
+easy.  We can run the concrete interpreter on various object programs
+and make sure that it is working reasonably well.  After we have the
+concrete interpreter, we can easily change the operations to be
+abstract operations that operate over the abstract domain.  Then we
+could execute programs over the abstract domain.  This sounds easy
+(and it is in XSB) but a couple of issues arise.  First, when
+computing over the abstract domain, the outcome of conditional tests
+cannot always be determined.  This means that what was a
+deterministic concrete program becomes a nondeterministic abstract
+program.  Since we can't know which branch a specialization of the
+abstract program might take, we have to try them all.  Now in XSB,
+that is not a problem, since XSB supports nondeterminism.  Second,
+since we can't determine the exact outcome of conditionals, we don't
+know when to exit from loops.  So a simple execution of most any
+abstract program would loop infinitely.  What is really wanted is a
+least fixed point which will give reachable abstract states, and
+tabling in XSB gives exactly that.  So XSB is ideally suited for this
+kind of abstract interpretaton problem.
+
+Consider how this approach works in a specific case.  The XSB
+(actually Prolog) program shown below is an interpreter for a simple
+procedural language that supports nested procedures, static scoping,
+and call-by-value parameter passing.  It is far from trivial and we
+will discuss how each component works.
+
+First we describe how the execution environment is maintained.  When a
+procedure is executing, it must have access to all variables that are
+visible to it.  With each invocation of a procedure there is an
+activation record (AR) that stores its local variables.  This is
+maintined in our interpreter as a simple list of (variable-name,
+variable-value) pairs.  So when a procedure is executing, it will have
+access to its own AR that stores its local variables.  But it must
+also have access to variables global to it, i.e., those in enclosing
+blocks.  These are in ARs for the enclosing procedures.  So the state
+for a procedure is kept as a list of ARs, the first being the
+procedure's own AR, the second being the AR of the immediately
+enclosing procedure, etc.  We call such a list of AR's a Stack.
+
+The following simple predicates get and set variable values in a
+Stack.  They take a level number, indicating how global the variable
+is: 0 indicates local, 1 indicates in the immediately enclosing block,
+etc.  They also take a Stack, and a variable name.
+
+\begin{verbatim}
+:- import append/3, memberchk/2 from basics.
+
+% getVal(+N,+Stack,+Var,-Val)
+getVal(0,[AR|_],Var,Val) :- memberchk((Var,Val),AR).
+getVal(N,[_AR|Stack],Var,Val) :- N>0, N1 is N-1, getVal(N1,Stack,Var,Val).
+
+% setVal(+N,+StackIn,+Var,+Val,-StackOut)
+setVal(0,[AR|StackIn],Var,Val,[NAR|StackIn]) :-
+	repl_pair(AR,Var,Val,NAR).
+setVal(N,[AR|StackIn],Var,Val,[AR|StackOut]) :-
+	N > 0, N1 is N-1,
+	setVal(N1,StackIn,Var,Val,StackOut).
+
+repl_pair([(Var,_)|AR],Var,Val,[(Var,Val)|AR]) :- !.
+repl_pair([P|AR],Var,Val,[P|NAR]) :- repl_pair(AR,Var,Val,NAR).
+\end{verbatim}
+
+The interpreter takes as input the abstract syntax tree of an object
+program.
+
+
+\begin{verbatim}
+% evaluate a program
+
+eval(module(_Name,Block)) :-
+	evalBlock(Block,[],0,[],_Stack).
+
+evalBlock(block(Decls,Stmts),Pars,K,Stack0,Stack) :-
+	remFirst(K,Stack0,Stack1),
+	append(Pars,Decls,Locals),
+	evalStmts(Stmts,[Locals|Stack1],[_|Stack2]),
+	addFirst(K,Stack0,Stack2,Stack).
+
+remFirst(0,L,L).
+remFirst(N,[_|L0],L) :- N>0, N1 is N-1, remFirst(N1,L0,L).
+
+addFirst(0,_,Stack2,Stack2).
+addFirst(N,[AR|Stack0],Stack2,[AR|Stack]) :- 
+	N>0, N1 is N-1,
+	addFirst(N1,Stack0,Stack2,Stack).
+
+evalStmts([],Stack,Stack).
+evalStmts([Stmt|Stmts],Stack0,Stack) :-
+	evalStmt(Stmt,Stack0,Stack1),
+	evalStmts(Stmts,Stack1,Stack).
+
+evalStmt(assign(var(I,Name),Exp),Stack0,Stack) :-
+	evalExp(Exp,Stack0,Val),
+	setVal(I,Stack0,Name,Val,Stack).
+evalStmt(while(Bool,Stmts),Stack0,Stack) :-
+	evalExp(Bool,Stack0,BVal),
+	(BVal =:= 0
+	 ->	Stack = Stack0
+	 ;	evalStmts(Stmts,Stack0,Stack1),
+		evalStmt(while(Bool,Stmts),Stack1,Stack)
+	).
+evalStmt(if(Bool,Then,Else),Stack0,Stack) :-
+	evalExp(Bool,Stack0,BVal),
+	(BVal =\= 0
+	 ->	evalStmts(Then,Stack0,Stack)
+	 ;	evalStmts(Else,Stack0,Stack)
+	).
+evalStmt(call(I,Name,ActPars),Stack0,Stack) :-
+	getVal(I,Stack0,Name,proc(Forms,Body)),
+	evalPars(ActPars,Forms,Stack0,ParLocals),
+	evalBlock(Body,ParLocals,I,Stack0,Stack).
+evalStmt(print(Exps),Stack,Stack) :-
+	eval_print_exps(Exps,Stack).
+evalStmt(dump,Stack,Stack) :-
+	writeln(Stack),nl.
+
+evalPars([],[],_Stack,[]).
+evalPars([Exp|Exps],[(Var,_)|Vars],Stack,[(Var,Val)|Decls]) :-
+	evalExp(Exp,Stack,Val),
+	evalPars(Exps,Vars,Stack,Decls).
+
+eval_print_exps([],_).
+eval_print_exps([Exp|Exps],Stack) :-
+	evalExp(Exp,Stack,Val),
+	writeln(Val),
+	eval_print_exps(Exps,Stack).
+
+evalExp(int(V),_,V).
+evalExp(var(I,Name),Stack,Val) :-
+	getVal(I,Stack,Name,Val).
+evalExp(op(+,E1,E2),Stack,V) :-
+	evalExp(E1,Stack,V1),
+	evalExp(E2,Stack,V2),
+	V is V1+V2.
+evalExp(op(*,E1,E2),Stack,V) :-
+	evalExp(E1,Stack,V1),
+	evalExp(E2,Stack,V2),
+	V is V1*V2.
+evalExp(op(-,E1,E2),Stack,V) :-
+	evalExp(E1,Stack,V1),
+	evalExp(E2,Stack,V2),
+	V is V1-V2.
+evalExp(op(<,E1,E2),Stack,V) :-
+	evalExp(E1,Stack,V1),
+	evalExp(E2,Stack,V2),
+	(V1<V2 -> V=1; V=0).
+evalExp(op(>,E1,E2),Stack,V) :-
+	evalExp(E1,Stack,V1),
+	evalExp(E2,Stack,V2),
+	(V1>V2 -> V=1; V=0).
+evalExp(op(=,E1,E2),Stack,V) :-
+	evalExp(E1,Stack,V1),
+	evalExp(E2,Stack,V2),
+	(V1=:=V2 -> V=1; V=0).
+
+\end{verbatim}
+
+
+
+\begin{verbatim}
+% compose stmt operations
+evalStmts([],Stack,Stack).
+evalStmts([Stmt|Stmts],Stack0,Stack) :-
+    evalStmt(Stmt,Stack0,Stack1),
+    evalStmts(Stmts,Stack1,Stack).
+
+% extract envs for called block and exec body in that context
+evalBlock(block(Decls,Stmts),Pars,Level,Stack0,Stack) :-
+    keepTail(Level,Stack0,Stack1),
+    append(Pars,Decls,Locals),
+    evalStmts(Stmts,[Locals|Stack1],[_|Stack2]),
+    replTail(Level,Stack0,Stack2,Stack).
+
+% compute value of an expression in a context
+evalExp(Exp,Stack,Val) :- ......
+
+% evaluate a statement, generating new Stack
+evalStmt(assign(var(I,Name),Exp),Stack0,Stack) :-
+    evalExp(Exp,Stack0,Val), setVal(I,Stack0,Name,Val,Stack).
+evalStmt(while(Bool,Stmts),Stack0,Stack) :-
+    evalExp(Bool,Stack0,BVal),
+    (BVal =:= 0 -> Stack = Stack0
+                ;  evalStmts(Stmts,Stack0,Stack1),
+                   evalStmt(while(Bool,Stmts),Stack1,Stack)).
+evalStmt(if(Bool,Then,Else),Stack0,Stack) :-
+    evalExp(Bool,Stack0,BVal),
+    (BVal =\= 0 -> evalStmts(Then,Stack0,Stack)
+                ;  evalStmts(Else,Stack0,Stack)).
+evalStmt(call(I,Name,ActPars),Stack0,Stack) :-
+    getVal(I,Stack0,Name,proc(Forms,Body)),
+    evalPars(ActPars,Forms,Stack0,ParLocals),
+    evalBlock(Body,ParLocals,I,Stack0,Stack).
+\end{verbatim}
+
+
+To obtain an abstract interpreter that does uninitialized variable
+analysis: 
+
+Underline evalExp call in assignment clause to point out that its
+definition is changed to implement abstract operations over the
+abstract domain of \{uninitialized, hasValue\}.  Constant is mapped to
+hasValue.  Binary ops return hasValue if both their operands are
+hasValue, otw uninitialized.
+
+Add
+\begin{verbatim}
+     :- table evalStmt/3.
+\end{verbatim}
+at top.
+
+Cross out the BVal =?= 0 conditions from the while and if-then-else
+clauses, to get regular disjunctions, instead of Prolog's
+if-then-else.
+

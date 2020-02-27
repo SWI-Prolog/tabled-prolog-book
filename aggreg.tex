@@ -1,0 +1,646 @@
+\chapter{Aggregation}
+
+In logic programming it is often the case that one wants to compare
+the various solutions to a single goal with each other.  For example,
+we may have an employee relation that stores employee names, their
+departments and salaries, and we want to find, say, the total salary
+of all the employees.  This requires querying the employee relation to
+retrieve the salaries and then combining all the solutions to find
+their sum.  In an SQL database query, this is done using aggregate
+functions and the GROUP BY clause.
+
+Prolog provides several general predicates, the so-called
+all-solutions predicates, to allow a programmer to do such things.
+The all-solution predicates, such as findall/3, bagof/3 and setof/3,
+accumulate all the solutions to a particular goal into a list. The
+programmer can then use normal recursive predicates to compute the
+desired function over that list, for example, the sum of the elements.
+
+To be concrete, to find the total of the salaries, a Prolog programmer
+could write:
+\begin{verbatim}
+    :- bagof(Sal,(Name,Dept)^employee(Name,Dept,Sal),Salaries),
+       listsum(Salaries,MaxSal).
+\end{verbatim}
+The predicate \verb|listsum/2| simply takes a list of numbers and
+returns their sum.  The all-solutions predicate \verb|bagof/2| takes a
+template, a goal, and returns a list of instantiations of the
+template, one for each solution to the goal.  In this case, the
+template is simply the variable \verb|Sal|, so we will get back a list
+of salaries. The goal is:
+\begin{verbatim}
+    (Name,Dept)^employee(Name,Dept,Sal)
+\end{verbatim}
+The variables in the term before the \verb|^| symbol indicate the {\em
+existential} variables in the goal.  The values of \verb|Sal| in
+successful solutions to the goal are accumulated into a single list,
+regardless of the values of the existential variables.  In this case,
+we want all salary values, regardless of the employee's name or
+department.  Another possibly interesting alternative query would be:
+\begin{verbatim}
+    :- bagof(Sal,(Name)^employee(Name,Dept,Sal),Salaries),
+       maximum(Salaries,TotalSals).
+\end{verbatim}
+This query, without the variable \verb|Dept| being existentially
+quantified, groups together solutions that have the same department,
+and returns nondeterministically, for each department, the list of
+salaries for employees in that department.  So this is what one would
+get using a ``group by'' query in the database language SQL.
+
+The \verb|bagof/3| all-solutions predicate is used here because we
+don't want to eliminate duplicate salaries.  If two employees have the
+same salary, we want to add both numbers; we want the sum of salaries,
+not the sum of {\em different} salaries.
+
+One computational disadvantage of Prolog's all-solutions predicates is
+that regardless of the function to be computed over the bag (or set)
+of solutions, that list must still be created.  To accumulate the sum
+of a set of numbers, it certainly seems inefficient to first construct
+a list of them and then add them up.  Clearly one could just
+accumulate their sum as they are produced.  In XSB if the goal is
+tabled, the situation is exacerbated, in that the set of solutions is
+in the table already; building another list of them seems a bit
+redundant.
+
+XSB, being an extension of Prolog, supports its all-solutions
+predicates, but it also uses tabling to support several other such
+predicates, which are described in this chapter.
+
+\section{Tabled Agggregation and Lattice Operations: Min, Max}
+
+In XSB we can use a table declaration to indicate that we want to
+aggregate the returned values of a particular argument.  For example,
+to find the maximum of all salaries of employees, we could declare:
+\begin{verbatim}
+:- table maxEmployeeSal(lattice(max/3)).
+maxEmployeeSal(Sal) :- employee(_,_,Sal).
+\end{verbatim}
+and define:
+\begin{verbatim}
+max(X,Y,Z) :- (Y > X -> Z = Y ; Z = X).
+\end{verbatim}
+We define the predicate \verb|MaxEmployeeSal/1| to be true of employee
+salaries, and we declare that it is to be tabled using the lattice
+operation \verb|max/3| on its only argument.  We define \verb|max/3|
+to be the operation that takes two numbers as input and produces the
+larger as output.  Notice that this operation does define a lattice
+over numbers, which is why we use the \verb|lattice| indicator in the
+table declaration.  In this situation, \verb|maxEmployeeSal/1| must be
+called with a variable.  XSB computes the first answer and puts it in
+the table, and then fails back to find other answers.  As each answer
+is found, the \verb|max| operation is called with the previous answer
+and the new answer, and the result of that operation replaces the
+previous answer in the table.  So the table keeps only one answer, and
+in this case it is the maximum of all the numbers seen so far.  
+
+\section{Tabled Agggregation and the Fold Operation: sum}
+
+We can use the {\tt employee/3} relation to define a predicate {\tt
+  total\_salaries/1} that gives the total of the salaries of all
+employees (in any department), as follows:
+
+\begin{verbatim}
+:- table total_salaries(fold(sum/3,0)).
+total_salaries(Sal) :- employee(_Name,_Dept,Sal).
+
+sum(X,Y,Z) :- Z is X+Y.  
+\end{verbatim}
+
+Here we use the {\em fold} indicate how to combine the answers
+returned to the table.  {|em Fold} takes a binary function (as a
+ternary predicate), here {\tt sum/3}, and its identity, here {\tt 0},
+and applies function to the identity for the first element returned to
+the table.  Then for every following element returned, it applies the
+function to the element currently in the table and the new element,
+and replaces the current table entry with the resulting value.  So in
+this example, it will produce the sum of all {\tt salary} values as
+the value of {\tt Sal}.
+
+We can also use tabled aggregatio to get the effect of ``group by'' in
+SQL.  Consider the following definition that defines a predicate that
+for each department gives the sum of salaries of employees in that
+department:
+\begin{verbatim}
+:- table dept_salaries(_,fold(sum/3,0)).
+dept_salaries(Dept,Sal) :- employee(_Name,_Dept,Sal).
+
+sum(X,Y,Z) :- Z is X+Y.  
+\end{verbatim}
+Here the variable in the first argument of the predicate {\tt
+  dept\_salaries} in the table declaration indicates that answers
+should be grouped by that argument.  So in this case, {\tt
+  dept\_salaries} will provide, for each department, the sum of the
+salaries of the employees in that department.
+
+
+We use HiLog and tables to support aggregation.  In HiLog one
+can manipulate predicates, or the names of sets.  So we can construct
+a set, or bag really, that contains all the salaries in our example of
+the simple employee relation:
+\begin{verbatim}
+    :- hilog salaries.
+    salaries(Sal) :- employee(_Name,_Dept,Sal).
+\end{verbatim}
+The symbol \verb|salaries| is the name of a unary predicate that is
+true of all salaries, or rather is the name of a {\em bag} of all
+salaries.  It is a bag since it may contain the same salary multiple
+times.  XSB provides a predicate \verb|bagSum| which can be used to
+sum up the elements in a named bag.  So given the definition of the
+HiLog predicate \verb|salaries/1| above, we can get the sum of all the
+salaries with:
+\begin{verbatim}
+    :- bagSum(salaries,TotalSals).
+\end{verbatim}
+The first argument to \verb|bagSum| is the name of a bag, and the
+second is bound to the sum of the elements in the bag.
+
+As an interesting example of aggregation and recursion, consider the
+following problem.  Say our university is considering instituting a
+policy that guarantees that no supervisor shall make less than anyone
+he or she supervises.  Since they do not want to lower anyone's
+salary, to initiate such a policy, they will have to give raises to
+supervisors who make less than one of their employees.  And this may
+cascade up the chain of command.  We want to write a program that will
+calculate how much they will have to spend initially to start this new
+program.  The following program does this:
+\begin{verbatim}
+% include needed predicates
+    maximum(X,Y,Z) :- X>=Y -> Z=X; Z=Y.
+    sum(X,Y,Z) :- Z is X+Y.
+
+% The total cost is the sum of the raises.
+    :- table totcost(fold(sum/3,0)).
+    totcost(Cost) :- raise(Cost).
+
+% A raise is the max of the posible new salaries (own and
+% subordinates' salaries) minus the old salary.
+    raise(Raise) :- 
+        possNewSal(Emp,NSal),
+        emp(Emp,_,OSal), 
+        Raise is NSal-OSal.
+
+% A possible new salary is either one's old salary or the max of the
+% possible new salaries of one's immediate subordinates.
+    :- table(possNewSal(_,lattice(maximum/3))).
+    possNewSal(Emp,Sal) :- emp(Emp,_,Sal).
+    possNewSal(Emp,Sal) :- 
+        dept(Dept,Emp), emp(Sub,Dept,_), 
+        possNewSal(Sub,Sal).
+
+% dept(Dept,Mgr): department data
+    dept(univ,provost).
+    dept(ceas,deanCEAS).
+    dept(cs,chairCS).
+    dept(ee,chairEE).
+
+% emp(Name,Dept,Salary):
+    emp(provost,univ,87000).
+    emp(deanCEAS,univ,91000).
+    emp(chairCS,ceas,95000).
+    emp(chairEE,ceas,93000).
+    emp(prof1CS,cs,65000).
+    emp(prof2CS,cs,97000).
+    emp(prof1EE,ee,90000).
+    emp(prof2EE,ee,94000).
+\end{verbatim}
+
+Here is the execution of this program for this data:
+\begin{verbatim}
+| ?- [raises].
+[Compiling ./raises]
+% Specialising partially instantiated calls to apply/3
+% Specialising partially instantiated calls to apply/2
+[raises compiled, cpu time used: 1.669 seconds]
+[raises loaded]
+
+yes
+| ?- totcost(C).
+
+C = 19000;
+
+no
+| ?- 
+\end{verbatim}
+And indeed, it would cost \$19,000 to upgrade everyone's salary
+appropriately.
+
+We can combine aggregation with dynamic programming (which is actually
+what is happening to some extent in the previous example) to nice
+effect.
+
+A variation on the knapsack problem discussed above in the section on
+dynamic programming uses aggregation to find an optimal knapsack
+packing.  (This example taken most recently from JLP 12(4) 92,
+Clocksin, Logic Programming specification and exectuion of
+dynamic-programming problems. He refers to Sedgewick, Algorithms A-W
+88.)  Recall that in the earlier knapsack problem we were given a set
+of integers and we try to see if, given a target integer, we can
+choose a subset of the given integers that sum to the target integer.
+The version we consider here is a bit more complicated, and perhaps
+more realistic.  Here we have a set of kinds of items; each item has a
+value and a size (both are integers.)  We are given a knapsack of a
+given capacity and we want to pack the knapsack with the items that
+maximize the value of the total.  We assume that there is an unlimited
+supply of items of each kind.
+
+This problem can be formulated as follows:
+\begin{verbatim}
+maximum(X,Y,Z) :- X>=Y -> Z=X; Z=Y.
+
+:- table cap/2.
+% cap(Size,Cap) if capacity of knapsick of size Size is Cap.
+cap(I,Cap) :- I >= 0, small_cap(I,Cap).
+
+% small_cap(BigSize)(BigCap) if there is some item with ISize and IVal
+% such that the capacity of a knapsack of size (BigSize-ISize) has
+% capacity (BigCap-Ival).
+:- table small_cap(_,lattice(maximum/3)).
+small_cap(BigSize,BigCap) :- 
+	item(ISize,IVal),
+	SmallSize is BigSize-ISize,
+	cap(SmallSize,SmallCap),
+	BigCap is IVal+SmallCap.
+% every knapsack (>=0) has capacity of 0.
+small_cap(BigSize)(0) :- BigSize >= 0.
+\end{verbatim}
+Here the tabling of \verb|cap/2| is not necessary, since the call to
+\verb|bagMax/2| is tabled automatically.
+
+A simple example of executing this program is:
+\begin{verbatim}
+%Data:
+item(10,18).
+item(8,14).
+item(6,10).
+item(4,6).
+item(2,2).
+
+| ?- [aggreg].
+[Compiling ./aggreg]
+[aggreg compiled, cpu time used: 0.861 seconds]
+[aggreg loaded]
+
+yes
+| ?- cap(48,C).
+
+C = 86;
+
+no
+| ?- cap(49,C).
+
+C = 86;
+
+no
+| ?- 
+\end{verbatim}
+And we can see that indeed to fill a knapsack of size 48, one should
+take four of item 10 (for total value 72), and one of item 8 (with
+value 14), giving us a total value of 86.
+
+Another problem that combines dynamic programming and aggregation is
+the problem of finding the way to associate a matrix chain product to
+minimize the cost of computing the product.
+\begin{verbatim}
+minimum(X,Y,Z) :- X=<Y -> Z=X; Z=Y.
+
+% mult_costI,J,C) if C is the cost of the cheapest way to compute the
+% product M_I x M_{I+1} x ... x M_J.
+mult_cost(I,I,0).
+mult_cost(I,J,C) :- I<J, factor(I,J,C).
+
+% factor(I,J) is true of costs obtained by computing the product of
+% matrices between I and J by factoring the chain at any point between
+% I and J and assuming optimal costs for the two factors.
+:- table factor(_,_,lattice(minumum/3)).
+factor(I,J,C) :- 
+	J1 is J-1,
+	between(I,K,J1),
+	mult_cost(I,K,C1),
+	K1 is K+1,
+	mult_cost(K1,J,C2),
+        I1 is I-1,
+	r(I1,Ri1), r(K,Rk), r(J,Rj),
+	C is C1+C2+Ri1*Rk*Rj.
+
+between(X,X,_).
+between(X,Y,Z) :- X < Z, X1 is X+1, between(X1,Y,Z).
+
+% r(I,N) if N is the number of rows in the I-1st matrix.  (The last is
+% the number of columns in the last matrix.)
+r(0,5).
+r(1,3).
+r(2,6).
+r(3,9).
+r(4,7).
+r(5,2).
+\end{verbatim}
+
+An example run is:
+\begin{verbatim}
+| ?- [mult_cost].
+[Compiling .\aggreg3]
+[aggreg3 compiled, cpu time used: 0.125 seconds]
+[aggreg3 loaded]
+
+yes
+| ?- mult_cost(1,4,C).
+
+C = 456;
+
+no
+| ?- 
+\end{verbatim}
+
+\section{Long Path Example}
+
+Consider the following example in which we try to find nice ways to
+explore a park while going from one point to another in it.  Say the
+park has various interesting things to see and paths between them, so
+all nodes are interesting.  We'll represent the paths in the park as a
+directed graph, with the points of interest as the nodes.  The goal
+now is, given a source and a destination node, find all ``maximal''
+paths from the source to the destination, those that pass through the
+most intermediate distinct nodes.  We can encounter a node more than
+once, but we don't want to traverse a path more than once.  The idea
+is that we want to take a more-or-less direct route to our target, but
+we'd like to see as many points of interest as is reasonable along the
+way.
+
+The following program will compute the set of such maximal paths.
+\begin{verbatim}
+    :- import member/2,append/3, reverse/2 from basics.
+
+% stroll(X,Y,Path) if Path is a way to go from X to Y seeing many things.
+    stroll(X,Y,Path) :- walk(X,Y,BPath), reverse(BPath,Path).
+
+% superset(L1,L2) if L1 is a superset of L2.
+    :- index superset/2-2.
+    superset(_,[]).
+    superset(L2,[X|L1]) :- member(X,L2), superset(L2,L1).
+
+% L is in walk(X,Y) if L is a (reversed) path from X to Y.
+% (must be tabled because of left-recursion.)
+    :- table walk(_,_,po(superset/2)).
+    walk(X,Y,[Y,X]) :- edge(X,Y).
+    walk(X,Y,[Y|P]) :- walk(X,Z,P), edge(Z,Y).
+\end{verbatim}
+
+Here \verb|walk(X,Y)| is a parameterized predicate name which
+represents the set of paths that go from node \verb|X| to node
+\verb|Y|.  Each path is represented as a list of nodes (in reverse
+order of traversal.)  The \verb|bagPO| aggregation takes just the
+maximal paths, since we want the alternatives that allow us to see as
+many points of interest as possible.  Here is the execution of the
+program on the data shown.
+\begin{verbatim}
+    edge(a,b).
+    edge(b,c).
+    edge(b,d).
+    edge(c,d).
+    edge(d,e).
+    edge(a,f).
+    edge(f,g).
+    edge(g,e).
+
+| ?- [aggreg].
+[aggreg loaded]
+
+yes
+| ?- stroll(a,e,P).
+
+P = [a,b,c,d,e];
+
+P = [a,f,g,e];
+
+no
+| ?- 
+\end{verbatim}
+
+Some aggregate operations can be implemented using either
+\verb|bagReduce/4| or \verb|bagPO/3|.  \verb|bagMax/2| is a good
+example. Both of the following definitions are correct:
+\begin{verbatim}
+    :- hilog maximum.
+    maximum(X,Y,Z) :- X >= Y -> Z = X ; Z = Y.
+    bagMax(Bag,Max) :- bagReduce(Bag,Max,maximum,-1.0e38).
+\end{verbatim}
+
+\begin{verbatim}
+    :- hilog lt.
+    lt(X,Y) :- X < Y.
+    bagMax(Bag,Max) :- bagPO(Bag,Max,lt).
+\end{verbatim}
+
+In such cases it is more efficient to use \verb|BagReduce/4| because
+it can take advantage of the fact that at any point in time, there
+will be at most one value in the table.
+
+\section{Recursive Aggregation}
+
+Aggregation interacts in an interesting way with tabling.  We've
+already seen that we can use them both: in the scenic-path example, we
+needed tabling to compute the paths using left recursion.  We also saw
+an interesting recursive application of aggregation in the
+salary-raising example.  We continue to explore the interaction of
+tabling, aggregation and recursion in this section by developing a
+program to compute the shortest paths between nodes in a (positive)
+weighted graph.
+
+\subsection{Shortest Path}
+
+To compute the shortest path between two points in a graph, we first
+define a HiLog predicate \verb|short_path(Source,Target)|, that given
+two nodes returns short paths from the first to the second.  There may
+be several short paths between two nodes, but we will be sure that one
+of them must be the shortest path:
+\begin{verbatim}
+    % There's a short path if there's an edge, 
+    short_path(X,Y)(D) :- edge(X,Y,D).
+    % or if there is a short path to a predecessor and then an edge.
+    short_path(X,Y)(D) :-
+        bagMin(short_path(X,Z),D1),
+        edge(Z,Y,D2),
+        D is D1 + D2.
+\end{verbatim}
+The first clause says that there is a short path from \verb|X| to
+\verb|Y| of length \verb|D| if there is an edge from \verb|X| to
+\verb|Y| with weight \verb|D|.  The second clause says there is a
+short path from \verb|X| to \verb|Y| of length \verb|D| if we take the
+minimum of the short paths from \verb|X| to a predecessor (\verb|Z|)
+of \verb|Y| and we get \verb|D| by adding the distance along the edge
+to \verb|Y| from the predecessor.
+
+Now to get the shortest path, we simply take the shortest of the short
+paths:
+\begin{verbatim}
+    % The shortest path is the minimum of the short paths
+    shortest_path(X,Y,D) :- bagMin(short_path(X,Y),D).
+\end{verbatim}
+
+This program in fact works for cyclic graphs, as long as all loops
+have nonnegative distance.  To see why it works, we must look at it
+more closely.  Normally we think of computing an aggregation by
+creating all the elements in the bag, and then performing the
+aggregation on the entire set.  However, doing that here, with a
+cyclic graph, would result in a bag with infinitely many elements,
+since there are infinitely many different paths through a cyclic
+graph.  It is clear that we can't construct and test every element in
+a bag of infinitely many elements.  \verb|bagMin| must return an
+answer before it has seen all the elements.  Notice that if a graph
+has a self-loop, say from node \verb|a| to node \verb|a|, then a
+\verb|D| such that \verb|short_path(X,a)(D)| is defined in terms of
+the minimum of a bag that contains \verb|D| itself.  This turns out to
+be well-defined, because the minimum operator is monotonic.  It works
+computationally because in the case of recursive definitions, the
+\verb|bagMin| may return an answer before it has seen all the answers.
+At any point it returns the best one it has seen so far: if another
+one comes along that is better, it returns that one; if another comes
+along that is no better, it just ignores it, and fails back to find
+another.
+
+So the order in which answers are generated can effect how much
+computation is done.  If poor answers are returned first and many
+paths are computed using those poor answers, then all that work is
+unnecessary and will have to be done again with improved answers.
+Whereas if the best answer is returned first, then much less total
+computation will have to be done.  So the complexity of this routine
+is dependent on the scheduling strategy of the underlying engine.  We
+will look at these issues more later.
+
+\subsection{Reasoning with Uncertainty: Annotated Logic}
+
+We will look at examples including computing with annotated logic and
+Fitting's LP over bilattices.
+
+\begin{verbatim}
+:- import bagMin/2 from aggregs.
+:- hilog minimum.
+minimum(X,Y,Z) :- X =< Y -> Z=X ; Z=Y.
+
+sumlist([],0).
+sumlist([X|L],S) :- sumlist(L,S1), S is S1+X.
+
+:- op(500,xfx,@).
+
+G:D :- orFun(G,D).
+orFun(G,D) :- bagMin(andFun(G),D).
+
+andFun(G)(D) :- G@L,sumlist(L,D).
+
+p(X,Y)@[D] :- edge(X,Y):D.
+p(X,Y)@[D1,D2] :- p(X,Z):D1,edge(Z,Y):D2.
+
+edge(a,b)@[5].
+edge(b,d)@[6].
+edge(b,c)@[1].
+edge(c,e)@[3].
+edge(e,d)@[1].
+edge(a,c)@[7].
+edge(c,d)@[2].
+\end{verbatim}
+
+
+\subsection{Longest Path}
+
+longest path.
+
+\begin{verbatim}
+% longest path (without loops)
+:- import bagMax/2 from aggregs.
+:- import member/2 from basics.
+
+longpath(X,Y,P)(D) :- edge(X,Y,D), P=[F|R], \+member(F,R).
+longpath(X,Y,P)(D) :- 
+	bagMax(longpath(X,Z,[Z|P]),D), edge(Z,Y,D), Y\==Z, \+member(Y,P).
+
+:- hilog maximum.  maximum(X,Y,Z) :- X @< Y -> Z=Y ; Z=X.
+
+edge(a,b,5).
+edge(a,b,6).
+edge(a,d,4).
+edge(d,b,5).
+edge(b,c,3).
+edge(b,c,4).
+\end{verbatim}
+
+\subsection{Markov Decision Processes}
+
+See IV's slides, and
+\begin{verbatim}
+:- import for/3 from basics.
+
+u(State,Action,Reward) :-
+	I = 10,
+	u_i(I,State,_Action0,Reward0),
+	iterate(State,10,Reward0,Action,Reward).
+
+iterate(State,I,OldReward,Action,Reward) :-
+	NextI is I+10,
+	u_i(NextI,State,NewAction,NewReward),
+	(NewReward - OldReward < 0.000000000001
+	 ->	Action = NewAction,
+		Reward = NewReward
+	 ;	iterate(State,NextI,NewReward,Action,Reward)
+	).
+
+%u_i(Iteration,State,Action,Reward)
+u_i(1,State,none,Reward) :-
+	r(State,Reward).
+u_i(I,State,Act,Reward) :-
+	I>1,Iminus1 is I-1,
+	argmax_sum_rewards_i(Iminus1,State,SumActRew),
+	SumActRew = argmax(Act,SumRew),
+	g(Disc),
+	r(State,Rew0),
+	Reward is Rew0 + Disc*SumRew.
+
+%argmax_sum_rewards(Iteration,State,argmax(Action,Reward)).
+:- table argmax_sum_rewards_i(_,_,lattice(argmax/3)).
+argmax_sum_rewards_i(I,State,argmax(Action,Reward)) :-
+	sum_rewards_i(I,State,Action,Reward).
+
+%sum_rewards_i(Iteration,State,Action,SumReward)
+:- table sum_rewards_i(_,_,_,fold(sum/3,0.0)).
+sum_rewards_i(I,St0,Act,Rew) :-
+	u_i(I,St,_PAct,Rew0),
+	t(St0,Act,St,Prob),
+	Rew is Prob*Rew0.
+
+sum(X,Y,Z) :- Z is X+Y.
+argmax(X,Y,Z) :-
+	X = argmax(_,R1),
+	Y = argmax(_,R2),
+	(R1 >= R2 -> Z = X ; Z = Y).
+
+%t(Sou,Act,Tar,Prob).
+t(a,a1,a,0.5).
+t(a,a1,b,0.5).
+t(a,a2,c,1.0).
+t(b,b1,a,0.25).
+t(b,b1,b,0.75).
+t(c,c1,c,0.5).
+t(c,c1,b,0.5).
+
+%r(State,Val)
+r(a,12.0).
+r(b,-4.0).
+r(c,2.0).
+
+%g(Discount)
+g(0.9).
+\end{verbatim}
+
+
+\section{Scheduling Issues}
+
+Discuss breadth-first-like scheduling.  Give example of graph that has
+exponential shortest-path with depth-first scheduling.  Give benches
+on both depth-first and breadth-first scheduler.  (For benches, maybe
+just give relative times, so as not to date it.)
+
+(ts) I agree, Ive been using relative times.
+
+\section{Stratified Aggregation}
+
+Issues of stratified findall here, stratified aggregation?
+

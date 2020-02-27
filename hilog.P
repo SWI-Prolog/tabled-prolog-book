@@ -1,0 +1,15 @@
+closure(R)(X,Y) :- R(X,Y).
+closure(R)(X,Y) :- R(X,Z), closure(R)(Z,Y).
+
+:- hilog parent.
+parent(able,adam).
+parent(able,eve).
+parent(cain,adam).
+parent(cain,eve).
+
+map(_F)([],[]).
+map(F)([X|Xs],[Y|Ys]) :- F(X,Y), map(F)(Xs,Ys).
+
+:- hilog successor, double.
+successor(X,Y) :- Y is X+1.
+double(X,Y) :- Y is X+X.

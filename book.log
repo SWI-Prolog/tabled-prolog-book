@@ -1,0 +1,371 @@
+This is pdfTeX, Version 3.14159265-2.6-1.40.15 (MiKTeX 2.9 64-bit) (preloaded format=pdflatex 2016.5.27)  26 FEB 2020 14:29
+entering extended mode
+**book
+(book.tex
+LaTeX2e <2014/05/01>
+Babel <3.9l> and hyphenation patterns for 68 languages loaded.
+("C:\Program Files\MiKTeX 2.9\tex\latex\base\report.cls"
+Document Class: report 2014/09/29 v1.4h Standard LaTeX document class
+("C:\Program Files\MiKTeX 2.9\tex\latex\base\size11.clo"
+File: size11.clo 2014/09/29 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@chapter=\count80
+\c@section=\count81
+\c@subsection=\count82
+\c@subsubsection=\count83
+\c@paragraph=\count84
+\c@subparagraph=\count85
+\c@figure=\count86
+\c@table=\count87
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+("C:\Program Files\MiKTeX 2.9\tex\latex\epsf\epsf.sty"
+This is `epsf.tex' v2.7.4 <14 February 2011>
+\epsffilein=\read1
+\epsfframemargin=\dimen103
+\epsfframethickness=\dimen104
+\epsfrsize=\dimen105
+\epsftmp=\dimen106
+\epsftsize=\dimen107
+\epsfxsize=\dimen108
+\epsfysize=\dimen109
+\pspoints=\dimen110
+)
+\c@example=\count88
+\c@proposition=\count89
+\c@dummylemma=\count90
+ (book.aux)
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 74.
+LaTeX Font Info:    ... okay on input line 74.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 74.
+LaTeX Font Info:    ... okay on input line 74.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 74.
+LaTeX Font Info:    ... okay on input line 74.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 74.
+LaTeX Font Info:    ... okay on input line 74.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 74.
+LaTeX Font Info:    ... okay on input line 74.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 74.
+LaTeX Font Info:    ... okay on input line 74.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <17.28> on input line 94.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 94.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 94.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 94.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 94.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 94.
+ [1
+
+{C:/ProgramData/MiKTeX/2.9/pdftex/config/pdftex.map}] (book.toc
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <10.95> on input line 3.
+
+[1
+
+] [2] [3] [4])
+\tf@toc=\write3
+ [5] (intro.tex
+Chapter 1.
+[1
+
+] [2] [3] [4]) (prolog.tex [5]
+Chapter 2.
+[6
+
+] [7] [8] [9] [10] [11] [12] [13] [14] [15] [16] [17] [18]
+(figures/sld-append1.eps
+)
+[19] [20
+Non-PDF special ignored!] [21] [22] [23] [24] [25] [26] [27] [28]
+(figures/expgraph.eps
+)
+[29
+Non-PDF special ignored!]) (prolog_exercises.tex [30] [31]) (fol.tex [32]
+[33]
+Chapter 3.
+[34
+
+] [35] [36] [37] [38] [39] [40] [41] [42] [43] [44] [45]
+Overfull \hbox (25.09225pt too wide) in paragraph at lines 663--674
+\OT1/cmr/m/n/10.95 So for ex-am-ple, for a model of arith-metic, we would have 
+facts like: []\OT1/cmtt/m/n/10.95 model_domain(0)\OT1/cmr/m/n/10.95 , []\OT1/cm
+tt/m/n/10.95 model_domain(1)\OT1/cmr/m/n/10.95 ,
+ []
+
+
+Overfull \hbox (17.11282pt too wide) in paragraph at lines 663--674
+[]\OT1/cmtt/m/n/10.95 model_domain(2)\OT1/cmr/m/n/10.95 , and so on for the do-
+main el-e-ments. For func-tions we would have []\OT1/cmtt/m/n/10.95 model(+,[0,
+0],0)\OT1/cmr/m/n/10.95 ,
+ []
+
+[46] [47] [48] [49] [50] [51] [52] [53] [54] [55] [56] [57]) (fol_exercises.tex
+
+Overfull \hbox (86.62589pt too wide) in paragraph at lines 5--9
+[]\OT1/cmr/m/n/10.95 Prolog has in-fix op-er-a-tions that al-low you to write p
+ropo-si-tional ex-pres-sions, such as []\OT1/cmtt/m/n/10.95 (p /\ q \/ not(p /\
+ q)\OT1/cmr/m/n/10.95 ).
+ []
+
+[58] [59] [60]
+Overfull \hbox (39.91342pt too wide) in paragraph at lines 226--230
+[]\OT1/cmr/m/n/10.95 We will need an aux-il-iary pred-i-cate, call it mean[]ter
+m, where mean[]term(+Term,+VariableAsgn,-
+ []
+
+[61]) (datalog.tex [62]
+Chapter 4.
+[63
+
+] [64]
+(figures/slgf-owe1.eps
+)
+[65
+Non-PDF special ignored!]
+(figures/slgf-owe2.eps
+)
+(figures/slgf-owe3.eps
+)
+[66
+Non-PDF special ignored!]
+(figures/slgf-owe4.eps
+)
+(figures/slgf-owe5.eps
+)
+[67
+Non-PDF special ignored!
+Non-PDF special ignored!] [68] [69
+Non-PDF special ignored!]
+(figures/slgf-owel1.eps
+)
+(figures/slgf-owel2.eps
+)
+(figures/slgf-owel3.eps
+)
+(figures/slgf-owel4.eps
+)
+[70
+Non-PDF special ignored!
+Non-PDF special ignored!] [71
+Non-PDF special ignored!
+Non-PDF special ignored!]
+
+LaTeX Warning: Citation `graphbase' on page 72 undefined on input line 423.
+
+[72] [73] [74]
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <9> on input line 599.
+ [75] [76] [77] [78] [79]) (datalog_exercises.tex [80] [81])
+(grammars.tex [82]
+Chapter 5.
+[83
+
+] [84] [85] [86] [87] [88] [89] [90] [91] [92] [93] [94] [95]
+Overfull \hbox (13.13478pt too wide) in paragraph at lines 676--676
+[]\OT1/cmtt/m/n/10.95 % parseLLSF(SF,Follow,S0,S) if sentential form SF generat
+es the string from S0 to S.[] 
+ []
+
+[96] [97] [98] [99] [100]
+Overfull \hbox (64.87297pt too wide) in paragraph at lines 924--924
+[]\OT1/cmtt/m/n/10.95 23. [S-->aBC,1,p1(1,p2(2,p3(3,p4(4,6)))),p2(2,p3(3,p4(4,6
+))),p0(p2(2,p3(3,p4(4,6))),p4(4,6))][] 
+ []
+
+[101] [102]
+Overfull \hbox (54.13635pt too wide) in paragraph at lines 1007--1012
+[]\OT1/cmr/m/n/10.95 So in-stead of writ-ing the pred-i-cate as []\OT1/cmtt/m/n
+/10.95 match(Pat,Str)\OT1/cmr/m/n/10.95 , let's write it as []\OT1/cmtt/m/n/10.
+95 match(Pat,StrPrefix,StrSuffix)\OT1/cmr/m/n/10.95 ,
+ []
+
+
+Overfull \hbox (1.24596pt too wide) in paragraph at lines 1037--1055
+\OT1/cmr/m/n/10.95 takes the un-matched tail of the []\OT1/cmtt/m/n/10.95 Pat \
+OT1/cmr/m/n/10.95 and matches it against []\OT1/cmtt/m/n/10.95 StrSuff \OT1/cmr
+/m/n/10.95 and re-turns in []\OT1/cmtt/m/n/10.95 PatWithMismatch
+ []
+
+[103] [104]
+Overfull \hbox (98.96115pt too wide) in paragraph at lines 1122--1130
+[]\OT1/cmr/m/n/10.95 And we ta-ble that new pred-i-cate. Con-sider the pos-si-b
+le ar-gu-ments passed to []\OT1/cmtt/m/n/10.95 app_match_suffix_with_remainder/
+5\OT1/cmr/m/n/10.95 :
+ []
+
+) (grammars_exercises.tex [105] [106]) (automata.tex [107]
+Chapter 6.
+[108
+
+]
+(figures/m0s1s2s.eps
+)
+[109
+Non-PDF special ignored!] [110] [111] [112]
+(figures/efreem0s1s2s.eps
+)
+[113] [114
+Non-PDF special ignored!] [115]
+(figures/detm0s1s2s.eps
+)
+[116
+Non-PDF special ignored!] [117] [118] [119] [120]
+Overfull \hbox (41.87822pt too wide) in paragraph at lines 685--685
+[]    \OT1/cmtt/m/n/10.95 tsetof(S,indistinguishable(Mach,T,S),Ta).  % target i
+s those indistinguishable from T[] 
+ []
+
+[121] [122] [123]
+Overfull \hbox (17.50974pt too wide) in paragraph at lines 775--778
+\OT1/cmr/m/n/10.95 FLATES MUL-TI-PLE OC-CUR-RENCES OF THE SAME RE SUBEX-PRES-SI
+ON. FIX OR DELETE!!!!
+ []
+
+[124] [125] [126] [127]) (automata_exercises.tex
+(figures/m0s1s2s.eps
+)
+[128
+Non-PDF special ignored!]
+Overfull \hbox (119.12773pt too wide) in paragraph at lines 56--60
+[]\OT1/cmr/m/n/10.95 Given the def-i-ni-tion of the ma-chines M1 and M2, write 
+a pred-i-cate m(intersect(M1,M2),State,Symbol,TargetState)
+ []
+
+
+Overfull \hbox (51.48093pt too wide) in paragraph at lines 64--69
+[]\OT1/cmr/m/n/10.95 Given the def-i-ni-tion of a ma-chine Mach, write a pred-i
+-cate m(efree(Mach),State,Symbol,TargetState)
+ []
+
+
+Overfull \hbox (4.04616pt too wide) in paragraph at lines 73--76
+[]\OT1/cmr/m/n/10.95 Similarly write def-i-ni-tions of m(det(Mach),State,Symbol
+,TargetState), mis(det(Mach),IS)
+ []
+
+) (dynprog.tex [129]
+Chapter 7.
+[130
+
+] [131] [132]) (dynprog_exercises.tex) (hilog.tex [133]
+Chapter 8.
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 14.
+("C:\Program Files\MiKTeX 2.9\tex\latex\base\omscmr.fd"
+File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
+)
+LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10.95> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 14.
+ [134
+
+] [135] [136]
+[137]) (debugging.tex [138]
+Chapter 9.
+[139
+
+]) (aggreg.tex [140]
+Chapter 10.
+[141
+
+] [142] [143] [144] [145] [146] [147] [148]
+Overfull \hbox (0.41153pt too wide) in paragraph at lines 419--422
+[]\OT1/cmr/m/n/10.95 Some ag-gre-gate op-er-a-tions can be im-ple-mented us-ing
+ ei-ther []\OT1/cmtt/m/n/10.95 bagReduce/4 \OT1/cmr/m/n/10.95 or []\OT1/cmtt/m/
+n/10.95 bagPO/3\OT1/cmr/m/n/10.95 . []\OT1/cmtt/m/n/10.95 bagMax/2
+ []
+
+[149] [150] [151] [152] [153]) (incrtabling.tex [154]
+Chapter 11.
+) (negation.tex [155
+
+]
+Chapter 12.
+[156
+
+] [157] [158] [159] [160]
+Overfull \hbox (267.7483pt too wide) in paragraph at lines 293--300
+[]\OT1/cmr/m/n/10.95 From []\OT1/cmtt/m/n/10.95 forall(X,bachelor(X) <-> (male(
+X) /\ not(married(X))))\OT1/cmr/m/n/10.95 , we can in-fer []\OT1/cmtt/m/n/10.95
+ (bachelor(bill) <-> (male(bill) /\ not(married(bill))))\OT1/cmr/m/n/10.95 .
+ []
+
+[161] [162] [163] [164] [165] [166] [167] [168] [169] [170] [171]
+
+LaTeX Warning: Citation `hjk' on page 172 undefined on input line 870.
+
+[172] [173] (wellfounded.tex
+
+LaTeX Warning: Citation `vangelder-et-al' on page 174 undefined on input line 4
+.
+
+[174] [175] [176] [177] [178]) [179]
+Overfull \hbox (9.80112pt too wide) in paragraph at lines 1005--1005
+[]\OT1/cmr/bx/n/14.4 Representation of Par-tial Knowl-edge with Well-Founded Mo
+d-
+ []
+
+[180] [181] [182] [183]) (metaint.tex [184]
+Chapter 13.
+[185
+
+] [186] [187] [188] [189]) (modules.tex [190]
+Chapter 14.
+) (files.tex [191
+
+]
+Chapter 15.
+[192
+
+] [193] [194] [195] [196]) (tablebi.tex [197] [198]
+Chapter 16.
+) (xsbsys.tex [199
+
+]
+Chapter 17.
+) (book.bbl [200
+
+]) [201
+
+] (book.aux)
+
+LaTeX Warning: There were undefined references.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 544 strings out of 493698
+ 6017 string characters out of 3144385
+ 60787 words of memory out of 3000000
+ 3833 multiletter control sequences out of 15000+200000
+ 14022 words of font info for 48 fonts, out of 3000000 for 9000
+ 1025 hyphenation exceptions out of 8191
+ 26i,8n,19p,199b,410s stack positions out of 5000i,500n,10000p,200000b,50000s
+<C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Pr
+ogram Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Program Fi
+les/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmcsc10.pfb><C:/Program Files/MiK
+TeX 2.9/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Program Files/MiKTeX 2.9/
+fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Program Files/MiKTeX 2.9/fonts/ty
+pe1/public/amsfonts/cm/cmmi8.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/publi
+c/amsfonts/cm/cmr10.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfont
+s/cm/cmr12.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr6
+.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/P
+rogram Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Program Fil
+es/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr9.pfb><C:/Program Files/MiKTeX 
+2.9/fonts/type1/public/amsfonts/cm/cmsl10.pfb><C:/Program Files/MiKTeX 2.9/font
+s/type1/public/amsfonts/cm/cmss10.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/
+public/amsfonts/cm/cmsy10.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/a
+msfonts/cm/cmti10.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/
+cm/cmti12.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmti9
+.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
+Output written on book.pdf (207 pages, 704164 bytes).
+PDF statistics:
+ 741 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+

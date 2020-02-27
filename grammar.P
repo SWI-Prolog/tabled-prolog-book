@@ -1,0 +1,83 @@
+'C'(I,W,I1) :- 
+	nonvar(I)
+	 ->	word(I,W), I1 is I+1
+	 ;	I is I1-1, word(I,W).
+
+assert_words([],N,N).
+assert_words([Word|Words],N,M) :- 
+	assert(word(N,Word)), N1 is N+1, assert_words(Words,N1,M).
+
+init_words(String,N) :-
+    retractall(word(_,_)),
+    assert_words(String,1,N),
+    abolish_all_tables.
+/****************************************
+:- table expr/3, term/3.
+
+eval_string(String,Val) :- 
+    init_words(String,N),
+    expr(Val,1,N).
+
+expr(Val) --> expr(Eval), [+], term(Tval), {Val is Eval+Tval}.
+expr(Val) --> term(Val).
+term(Val) --> term(Tval), [*], factor(Fval), {Val is Tval*Fval}.
+term(Val) --> factor(Val).
+factor(Val) --> prime(Num), [^], factor(Exp), {Val is floor(exp(log(Num)*Exp)+0.5)}.
+factor(Val) --> prime(Val).
+prime(Val) --> ['('], expr(Val), [')'].
+prime(Int) --> [Int], {integer(Int)}.
+/***************************************************/
+
+    :- table 'C'/3.
+    :- table s/2, b/2, g/2.
+    s --> b, [c].
+    s --> g, [d].
+
+    b --> b, b.
+    b --> [a].
+
+    g --> g, [a].
+    g --> [a].
+
+eval_string(String) :- 
+    init_words(String,N),
+    s(1,N).
+
+/* to extract the parses */
+:- import get_calls/3, get_returns/2 from trie_tables.
+
+e_parse_lit('C'(N,Word,M),Word) :- 'C'(N,Word,M).
+e_parse_lit(Goal,Parse) :-
+	rule(Goal,Body),
+	goal_in_table(Body),
+	e_parse_goal(Body,Subparses),
+	functor(Goal,Sym,_),
+	Parse =.. [Sym|Subparses].
+
+goal_in_table((Lit,Rest)) :- !,
+	lit_in_table(Lit),
+	goal_in_table(Rest).
+goal_in_table(Lit) :- 
+	lit_in_table(Lit).
+
+lit_in_table('C'(N,W,M)) :- !, 'C'(N,W,M).
+lit_in_table(Lit) :- get_calls(Lit,Cs,Rt), get_returns(Cs,Rt).
+
+e_parse_goal((Lit,Rest),[P|Ps]) :- !,
+	e_parse_lit(Lit,P),
+	e_parse_goal(Rest,Ps).
+e_parse_goal(Lit,[P]) :- !,
+	e_parse_lit(Lit,P).
+
+ldg(Filename) :-
+	abolish(rule/2),
+	see(Filename),
+	repeat,
+	read(Term),
+	(Term == end_of_file
+	 ->	seen,!,fail
+	 ;	expand_term(Term,Term1),
+		(Term1 = (H:-B) -> true ; H=Term1,B=true),
+		assert(rule(H,B)),
+		fail
+	).

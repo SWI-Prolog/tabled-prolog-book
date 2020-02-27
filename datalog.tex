@@ -1,0 +1,839 @@
+\chapter{Tabling and Datalog Programming}
+
+In the previous chapter we saw several limitations of Prolog.  When we
+considered grammars in Prolog, we found that the parser provided by
+Prolog ``for free'' is a recursive descent parser and not one of the
+better ones that we'd really like to have.  When looking at deductive
+databases, we found that some perfectly reasonable programs go into an
+infinite loop, for example transitive closure on a cyclic graph.  We
+had to go to some lengths to program around these limitations, and
+even then the results were not completely satisfying.
+
+XSB implements a feature not (yet) found in many other Prolog systems.
+It is the notion of tabling, also sometimes called memoization or
+lemmatization.  The idea is very simple: never make the same procedure
+call twice: the first time a call is made, remember all the answers it
+returns, and if it's ever made again, use those previously computed
+answers to satisfy the later request.  In XSB the programmer indicates
+what calls should be tabled by using a compiler directive, such as:
+\begin{verbatim}
+    :- table np/2.
+\end{verbatim}
+This example requests that all calls to the procedure \verb|np| that
+has two arguments should be tabled.  Predicates that have such
+declarations in a given program are called tabled predicates.
+
+A simple example of a use of tabling is in the case of a definition of
+transitive closure in a graph.  Assume that we have a set of facts
+that define a predicate \verb|owes|.  The fact \verb|owes(andy,bill)|
+means that Andy owes Bill some money.  Then we use \verb|owes| to
+define a predicate \verb|avoids| as we did in the previous chapter.  A
+person avoids anyone he or she owes money to, as well as avoiding
+anyone they avoid.
+
+\begin{verbatim}
+    :- table avoids/2.
+    avoids(Source,Target) :- owes(Source,Target).
+    avoids(Source,Target) :-
+        owes(Source,Intermediate),
+        avoids(Intermediate,Target).
+\end{verbatim}
+Here we are assuming that the edges of a directed graph are stored in
+a predicate \verb|owes/2|.  The rules in this program are the same as
+those used in Prolog to define ancestor.  The difference is that in
+XSB we can make the table declaration, and this declaration guarantees
+that this predicate will be correctly computed, even if the graph in
+\verb|owes/2| {\em is} cyclic.  Intuitively it's clear that any call
+to \verb|avoids| will terminate because there are only finitely
+many possible calls for any finite graph, and since tabling guarantees
+that no call is ever evaluated more than once, eventually all the
+necessary calls will be made and the computation will terminate.  The
+problem with Prolog was that in a cyclic graph the same call was made
+and evaluated infinitely many times.
+
+Indeed, executing this program on the graph:
+\begin{verbatim}
+owes(andy,bill).
+owes(bill,carl).
+owes(carl,bill).
+\end{verbatim}
+for the query \verb|avoids(andy,X)|, which we saw go into an infinite
+loop without the table declaration, yields the following under XSB:
+\begin{verbatim}
+warren% xsb
+XSB Version 1.4.2 (95/4/6)
+[sequential, single word, optimal mode]
+| ?- [graph].
+[Compiling ./graph]
+[graph compiled, cpu time used: 0.589 seconds]
+[graph loaded]
+
+yes
+| ?- avoids(andy,Y).
+
+Y = bill;
+
+Y = carl;
+
+no
+| ?- 
+\end{verbatim}
+
+\subsubsection{XSB tabled execution as the execution of concurrent machines}
+
+We understood a Prolog evaluation as a set of executing deterministic
+procedural machines, increasing in number as one of them executes a
+multiply-defined procedure, and decreasing in number as one of them
+encounters failure.  Then we saw how it was implemented by means of a
+depth-first backtracking search through the tree of SLD computations,
+or procedure evaluations.  To add the concept of tabling, we have to
+extend our computational model.  Tabling execution is best understood
+as computation in a concurrent programming language.  Nontabled
+predicates are evaluated exactly as in SLD, with the intuition of a
+procedure call.  Evaluating a tabled predicate is understood as
+sending the goal to a cacheing goal server and then waiting for it to
+send back the answers.  If no server for the goal exists, then one is
+created and begins (concurrently) to compute and save answers.  If a
+server for this goal already exists, none needs to be started.  When
+answers become available, they can be (and eventually will be) sent
+back to all waiting requesters.  So tabled predicates are processed
+``asynchronously'', by servers that are created on demand and then
+stay around forever.  On creation, they compute and save their answers
+(eliminating duplicates), which they then will send to anyone who
+requests them (including, of course, the initiating requester.)
+
+Now we can see tabled execution as organized around a set of servers.
+Each server evaluates a nondeterministic procedural program (by a
+depth-first backtracking search through the alternatives) and
+interacts with other servers asynchronously by requesting answers and
+waiting for them to be returned.  For each answer returned from a
+server, computation continues with that alternative.
+
+The abstraction of Prolog computation was the SLD tree, a tree that
+showed the alternative procedural machines.  We can extend that
+abstraction to tabled Prolog execution by using multiple SLD trees,
+one for each goal server.  
+
+Let's trace the execution of the program for reachability on the
+simple graph in \verb|owes/2|, given the query 
+\verb|:- avoids(andy,Ya)|.  
+Again, we start with a query and develop the SLD
+tree for it until we hit a call to a tabled predicate.  This is shown
+in Figure
+\ref{slgf-owe1}.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owe1.eps}}
+\caption{Tree for avoid(andy,Ya) goal server}\label{slgf-owe1}
+\end{figure}
+Whereas for SLD trees, we used a pseudo predicate \verb|ans| to
+collect the answers, for SLD trees for goal servers, we will use the
+entire goal to save the answer, so the left-hand-side of the root of
+the SLD tree is the same as the right-hand-side.  Computation traces
+this tree in a left-to-right depth-first manner.  
+
+So the initial global machine state, or configuration, is:
+\begin{verbatim}
+  avoids(andy,Ya) :- avoids(andy,Ya).
+\end{verbatim}
+
+Then rules are found which match the first goal on the right-hand-side
+of the rule.  In this case there are two, which when used to replace
+the expanded literal, yield two children nodes:
+\begin{verbatim}
+  avoids(andy,Ya) :- owes(andy,Ya).
+  avoids(andy,Ya) :- owes(andy,Intb),avoids(Intb,Ya).
+\end{verbatim}
+
+Computation continues by taking the first one and expanding it.  Its
+selected goal (the first on the right-hand side) matches one rule (in
+this case a fact) which, after replacing the selected goal with the
+(empty) rule body, yields:
+\begin{verbatim}
+  avoids(andy,bill) :-
+\end{verbatim}
+And since the body is empty, this is an answer to the original query,
+and the system could print out \verb|Y=bill| as an answer.
+
+Then computation continues by using the stack to find that the second
+child of the root node:
+\begin{verbatim}
+  avoids(andy,Ya) :- owes(andy,Intb),avoids(Intb,Ya).
+\end{verbatim}
+should be expanded next.  The selected goal matches with the fact
+\verb|owes(andy,bill)| and expanding with this results in:
+\begin{verbatim}
+  avoids(andy,Ya) :- avoids(bill,Ya).
+\end{verbatim}
+
+Now the selected goal for this node is \verb|avoids(bill,Ya)|, and
+\verb|avoids| is a tabled predicate.  Therefore this goal is to be
+solved by communicating with its server.  Since the server for that
+goal does not exist, the system creates it, and schedules it to
+compute its answers.  This computation is shown in Figure
+\ref{slgf-owe2}.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owe2.eps}}
+\caption{Tree for avoid(bill,Ya) goal server}\label{slgf-owe2}
+\end{figure}
+
+This computation sequence for the goal \verb|avoid(bill,Y)| is very
+similar to the previous one for \verb|avoid(andy,Y)|.  The first
+clause for \verb|avoids| is matched, followed by the one fact for
+\verb|owes| that has \verb|bill| as its first field, which generates
+the left-most leaf of the tree of the figure.  This is an answer which
+this (concurrently executing) server could immediately send back to
+the requesting node in Figure \ref{slgf-owe1}.  Alternatively,
+computation could continue in this server to finish the tree pictured
+in Figure \ref{slgf-owe2}, finally generating the right-most leaf:
+\begin{verbatim}
+avoids(bill,Ya) :- avoids(carl,Ya)
+\end{verbatim}
+Now since the selected goal here is tabled, the server for it is
+queried and its response is awaited.  Again, there is no server for
+this goal yet, so the system creates one and has it compute its
+answers.  This computation is shown in Figure \ref{slgf-owe3}.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owe3.eps}}
+\caption{Tree for avoids(carl,Ya) goal server}\label{slgf-owe3}
+\end{figure}
+
+This computaton is beginning to look familiar; again the form of the
+computation tree is the same (because only one clause matches
+\verb|owes(carl,Y)|).  Again an answer, \verb|avoids(carl,bill)|, is
+produced (and is scheduled to be returned to its requester) and
+computation continues to the right-most leaf of the tree with the
+selected goal of \verb|avoids(bill,Ya)|.  This is a tabled goal and so
+will be processed by its server.  But now the server {\em does} exist;
+it is the one Figure \ref{slgf-owe2}.  Now we can continue and see
+what happens when answers are returned from servers to requesters.
+Note that exactly {\em when} these answers are returned is determined
+by the scheduling strategy of our underlying concurrent language.  We
+have thus far assumed that the scheduler schedules work for new
+servers before scheduling the returning of answers.  Other
+alternatives are certainly possible.
+
+Now in our computation there are answers computed by servers that need
+to be sent back to their requesters.  The server for
+\verb|avoids(bill,Ya)| (in Figure \ref{slgf-owe2}) has computed an 
+answer \verb|avoids(bill,carl)|, which it sends back to the server for
+\verb|avoids(andy,Ya)| (in Figure \ref{slgf-owe1}).  That adds a child
+to the rightmost leaf of the server's tree, producing the new tree
+shown in Figure \ref{slgf-owe4}.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owe4.eps}}
+\caption{Updated tree for avoid(andy,Ya) goal server}\label{slgf-owe4}
+\end{figure}
+Here the answer (\verb|avoids(bill,carl)|) has been matched with the
+selected goal (\verb|avoids(bill,Ya)|) giving a value to \verb|Ya|,
+and generating the child \verb|avoids(andy,carl) :-|.  Note that this
+child is a new answer for this server.
+
+Computation continues with answers being returned from servers to
+requesters until all answers have been sent back.  Then there is
+nothing left to do, and computation terminates.  The trees of the
+three servers in the final state are shown in Figure \ref{slgf-owe5}.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owe5.eps}}
+\caption{Final state for all goal servers for query 
+avoids(andy,Ya)}\label{slgf-owe5}
+\end{figure}
+Duplicate answers may be generated (as we see in each server) but each
+answer is sent only once to each requester.  So duplicate answers are
+eliminated by the servers.
+
+Let's be more precise and look at the operations that are used to
+construct these server trees.  We saw that the SLD trees of Prolog
+execution could be described by giving a single rule, {\sc Program
+Clause Resolution}, and applying it over and over again to an initial
+node derived from the query.  A similar thing can be done to generate
+sets of server trees that represent the computation of tabled
+evaluation.  For this we need three rules:
+
+\begin{definition} {Program Clause Resolution} \label{def:pcr}
+Given a tree with a node labeled \\ $A :- A_1, A_2, \ldots, A_n$,
+which is either a root node of a server tree or $A_1$ is not indicated
+as tabled. Also given a rule in the program of the form $H :- B_1,
+B_2, \ldots, B_k$, (with all new variables) and given that $H$ and
+$B_1$ match with matching variable assignment $\theta$, then add a new
+node as a child of this one and label it with $(A :- B_1, B_2, \ldots,
+B_k, A_2, \ldots, A_n)\theta$, if it does not already have a child so
+labeled.  Note that the matching variable assignment is applied to all
+the goals in the new label.
+\end{definition}
+
+\begin{definition} {Subgoal Call} \label{def:sgc}
+Given a nonroot node with label $A :- A_1, A_2, \ldots, A_n$, where
+$A_1$ is indicated as tabled, and there is no tree with root $A_1 :-
+A_1$, create a new tree with root $A_1 :- A_1$.
+\end{definition}
+
+\begin{definition} {Answer Clause Resolution} \label{def:acl}
+Given a non-root node with label \\ $A :- A_1, A_2, \ldots, A_n$, and an
+answer of the form $B :-$ in the tree for $A_1$, then add a new node
+as child of this node labeled by $(A :- A_2, \ldots, A_n)\theta$,
+where $\theta$ is the variable assignments obtained from matching $B$
+and $A_1$ (if there is not already a child with that label.)
+\end{definition}
+
+So for example the trees in Figure \ref{slgf-owe5} are constructed by
+applying these rules to the initial tree (root) for the starting goal.
+XSB can be understood as efficiently constructing this forest of
+trees.  We have seen that XSB with tabling will terminate on a query
+and program for which Prolog will loop infinitely.  It turns out that
+this is not just an accident, but happens for many, many programs.
+For example, here we've written the transitive closure of owes using a
+right recursive rule, i.e., the recursive call to \verb|avoids|
+follows the call to \verb|owes| in the second rule defining
+\verb|avoids|.  We could also define \verb|avoids| with a rule that
+has a call to \verb|avoids| before a call to \verb|owes|.  That
+definition would not terminate in Prolog for any graph, but with
+tabling, it is easily evaluated correctly.
+
+\section{More on Transitive Closure}
+
+We saw in the previous section how XSB with tabling will correctly and
+finitely execute a transitive closure definition even in the presence
+of cyclic data.  Actually, this is only a simple example of the power
+of tabled evaluation.
+
+We can write another version of transitive closure:
+\begin{verbatim}
+    :- table avoids/2.
+    avoids(Source,Target) :- owes(Source,Target).
+    avoids(Source,Target) :-
+        avoids(Source,Intermediate),
+        owes(Intermediate,Target).
+\end{verbatim}
+This one is left recursive.  A Prolog programmer would not consider
+writing such a definition, since in Prolog it is guaranteed to be
+nonfinite.  But with tabling, this definition works fine.  As a matter
+of fact, it is generally a more efficient way to express transitive
+closure than is right recursion.  In this section we will look at
+various versions of transitive closure and compare their efficiency.
+
+Let's consider the evaluation of the same \verb|avoids| query on the
+same \verb|owes| data as above, but using the left-recursive
+definition of avoids.
+
+Figure \ref{slgf-owel1} shows the state of the initial server when it
+first encounters a request to a server.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owel1.eps}}
+\caption{Beginning of evaluation of avoids(andy,Ya) for left-recursive
+transitive closure definition}\label{slgf-owel1}
+\end{figure}
+Note that this time the request to a server is to the server for
+\verb|avoids(andy,Ya)|, and this is the server itself.  (The names of
+the variables don't matter when finding a server; they are just
+``placeholders'', so any server with the same arguments with the same
+pattern of variables works.)  The server does have an answer already
+computed, so it can send it back to the requester (itself), and that
+results in the tree of Figure \ref{slgf-owel2}.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owel2.eps}}
+\caption{More of the evaluation of avoids(andy,Ya) for left-recursive
+transitive closure definition}\label{slgf-owel2}
+\end{figure}
+Now the new leaf, created by the returned answer, can be expanded (by
+{\sc Program Clause Resolution}) yielding a new answer,
+\verb|avoids(andy,carl)|.  This answer can be returned to the (only)
+requester for this server, and that generates a second child for the
+requester node; this state is shown in Figure \ref{slgf-owel3}.
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owel3.eps}}
+\caption{More of the evaluation of avoids(andy,Ya) for left-recursive
+transitive closure definition}\label{slgf-owel3}
+\end{figure}
+
+Now this node can be expanded (by {\sf Program Clause Resolution}) to
+obtain the tree of Figure \ref{slgf-owel4}
+\begin{figure}
+\centerline{\epsfbox{figures/slgf-owel4.eps}}
+\caption{Final forest for avoids(andy,Ya) for left-recursive
+transitive closure definition}\label{slgf-owel4}
+\end{figure}
+Here we have generated another answer, but it is the same as one we've
+already generated, so returning it to the requester node will {\em
+not} generate any new children.  All operations have been applied and
+no more are applicable, so we have reached the final forest of trees,
+a forest consisting of only one tree.  Note that we have the correct
+two (distinct) answers: that andy avoids bill and andy avoids carl.
+
+The right-recursive definition and the left-recursive definition of
+avoids both give us the correct answers, but the left-recursive
+definition (for this query) generates only one tree, whereas the right
+recursive definition generates several.  It seems as though the
+left-recrsive definition would compute such queries more efficiently,
+and this is indeed the case.
+
+Consider transitive closure over an \verb|owes| relation that defines
+a cycle.  E.g.,
+\begin{verbatim}
+owes(1,2).
+owes(2,3).
+owes(3,4).
+...
+owes(99,100).
+owes(100,1).
+\end{verbatim}
+defines a graph with a cycle of length 100.  How would the trees in
+the forest look after evaluation of a query to \verb|avoids(1,X)|
+using the right-recursive transitive closure definition?  For each $n$
+between 1 and 100, there is a tree with root:
+\verb|avoids(|$n$\verb|,Y)|.  And each such tree will have 100 leaf
+answer nodes.  So the forest will have at least $100^2$ nodes, and for
+a cycle of length $n$ the forest would be of size O($n^2)$.
+
+What does the forest look like if we use the left-recursive
+definition?  It has one tree with root, \verb|avoids(1,Y)|, and that
+tree has 100 answer leaves.  Generalizing from the tree of Figure
+\ref{slgf-owel4}, we see that it is a very flat tree, and so for a
+cycle of length $n$, the tree (forest) would be of size O($n$).  The
+left-recursive definition is indeed the more efficient to compute
+with.  Indeed the complexity of a single-source query to the
+left-recursive version of transitive closure is linear in the number
+of edges in the graph reachable from the source node.
+
+\section{Other Datalog Examples}
+
+In the previous section we saw how tabling can finitely process
+certain programs and queries for which Prolog would go into an
+infinite loop.  Tabling can also drastically improve the efficiency of
+some terminating Prolog programs.  Consider reachability in a DAG.
+Prolog will terminate, but it may retraverse the same subgraph over
+and over again.
+
+Let's reconsider the mostly linear \verb|owes| graph at the end of the
+previous chapter (shown in Figure \ref{expgraph}) on which Prolog had
+exponential complexity.  Consider evaluating the query
+\verb|avoids(andy,X)| with the left-recursive tabled definition of 
+transitive closure.  The forest for this evaluation will again consist
+of a single tree, and that tree will be very flat, similar in form to
+the one of Figure \ref{slgf-owel4}.  Thus tabled evaluation will take
+linear time.  So this is an example in which Prolog (with its right
+recursive definition) will terminate, but take exponential time; XSB
+with the left-recursive definition and tabling will terminate in
+linear time.
+
+The ``doubly-connected linear'' graph used here may seem unusual and
+specially chosen, but the characteristics of the graph that cause
+Prolog to be exponential are not that unusual.  Many naturally
+occurring directed graphs have multiple paths to the same node, and
+this is what casues the problem for Prolog.  [For example, consider a
+graph (generated by graph-base \cite{graphbase}) that places 5-letter
+English words in a graph with an edge between two words if one can be
+obtained from the other by changing a single letter.... (get example
+from Juliana, and see how it works.)
+
+Transitive closure is perhaps the most common example of a recursive
+query in Datalog, but other query forms can be encountered.  Consider
+the definition of \verb|same_generation|.  Given binary relations
+\verb|up| and \verb|down| on nodes, define a binary relation on nodes 
+that associates two nodes if one can be reached from the other by
+going $n$ steps up and then $n$ steps down, for some $n$.  The program
+is:
+
+\begin{verbatim}
+same_generation(X,X).
+same_generation(X,Y) :- 
+    up(X,Z1),
+    same_generation(Z1,Z2),
+    down(Z2,Y).
+\end{verbatim}
+
+The name of the predicate arises from the fact that if we let \verb|up|
+be defined by a ``parent\_of'' relation and \verb|down| be defined by
+the ``child\_of'' relation, then \verb|same_generation/2| defines
+people in the same generation.
+
+[to be continued...]
+
+\section{Some Simple Graph Problems}
+
+\subsection{Stongly Connected Components in a DAG}
+
+Consider the problem of finding connected components in a directed
+graph.  Assume we have a node and we want to find all the nodes that
+are in the same connected component as the given node.
+
+The first thought that comes to mind is: given a node X, find those
+nodes Y that are reachable from X and from which you can get back to
+X.  
+\begin{verbatim}
+sameSCC(X,Y) :- reach(X,Y), reach(Y,X).
+\end{verbatim}
+
+So we will assume that edges are given by an \verb|edge/2|
+relation:
+\begin{verbatim}
+:- table reach/2.
+reach(X,X).
+reach(X,Y) :- reach(X,Z), edge(Z,Y).
+\end{verbatim}
+
+Indeed given a node X, this will find all nodes in the same strongly
+connected component as X, however it will in general take $O(n*e)$
+time, where $n$ is the number of nodes and $e$ is the number of edges.
+The reason is that given an X, there are $n$ possible Z values and for
+each of them, we will find everything reachable from them, and each
+search can take $O(e)$ time.
+
+However, we can do better.  It is known that this problem can be
+solved in $O(e)$ time.  The idea is, given a node X, to find all nodes
+reachable from X following edges forward.  Then find all nodes
+reachable from X following edges backward (i.e., follow edges against
+the arrow.)  Then intersect the two sets.  That will be the set of
+nodes in X's SCC, because if Y is in both these sets, you can follow
+the edges forward from X to Y and then since there is also a backwards
+path from X to Y, there is forward path from Y to X, so you can get
+from X to Y and back to X following edges forward.  So the program
+that does this is:
+
+\begin{verbatim}
+% sameSCC(+X,-Y)
+sameSCC(X,Y) :- reachfor(X,Y), reachback(X,Y).
+
+:- table reachfor/2, reachback/2.
+reachfor(X,X).
+reachfor(X,Y) :- reachfor(X,Z),edge(Z,Y).
+
+reachback(X,X).
+reachback(X,Y) :- reachback(X,Z),edge(Y,Z).
+\end{verbatim}
+
+Let's now consider its complexity to see why it is $O(e)$.  For a
+fixed value X, the computation of the query \verb|reachfor(X,Y)| takes
+$O(e)$ time.  Then we may have $O(n)$ calls to \verb|reachback(X,Y)|
+(one for each Y) but they all use one underlying call to
+\verb|reachback(X,_)| which takes $O(e)$ and is done only once.  So
+when we add all that up (assuming a connected graph), we get $O(e)$
+time.
+
+(NOTE:DSW expand with ideas for when back-edge needs to be relative to 
+nodes reachable from a source; as when edge is a state transition
+function.  Need subsumption, but can use a ``poor man's'' subsumption...
+It only uses a subsuming call if that call is already completed.)
+
+
+\subsection{Connected Components in an Undirected Graph}
+
+Another problem is to find connected components in an undirected
+graph.  The usual procedural algorithm is linear in the number of
+edges.  One starts by ordering the nodes.  Then proceed by taking the
+next unmarked node, calling it a leader, and marking it and all nodes
+reachable from it.  This is continued until all nodes are marked.
+
+This seems to be a difficult problem to solve in linear time with a pure 
+datalog program.  The following program solves this by using an
+``inflationary not'' operator, which is definable using XSB primitives 
+(as is shown.)  
+
+(NOTE:DSW--fix, expand,or delete.)
+
+\begin{verbatim}
+:- table leader/2.
+leader(N,T) :-
+	for(I,1,31),    % total number of nodes = 31
+	inot(leader(I,_)),  % not yet determined whether leader or not
+	(N=I, T=true    % so it must be a leader
+         ;
+	 reachable(I,N), T=false  % and then mark all reachable as nonleaders.
+        ).
+
+inot(Q) :-
+	excess_vars(Q,[],[],Vars),
+	get_calls(Q,S,R),
+	is_most_general_term(Vars),
+	get_returns(S,R),
+	!,
+	fail.
+inot(_).
+
+for(I,I,H) :- I =< H.
+for(I,L,H) :- L < H, L1 is L+1, for(I,L1,H).
+
+
+:- table reachable/2.
+reachable(X,Y) :- edge(X,Y).
+reachable(X,Y) :- reachable(X,Z),edge(Z,Y).
+\end{verbatim}
+
+\section{Genome Examples}
+
+[We need to get the semantics of the genome queries from Tony.  Does
+anybody remember?]
+
+\section{Subsumptive Tabling}
+
+[Maybe introduce subsumptive tabling here?  Then later chapter on
+  applications of it.  Maybe Anderson(?) pointer analysis.  And
+  meta-interpreter to see it's doing ``linear'' bottom-up evaluation
+  of propositional horn clauses, when called with open call.]
+
+\section{Inferring When to Table}
+
+Up to now whenever we wanted calls to a predicate to be tabled, we
+explicitly coded a table directive to indicate the specific predicate
+to table.  There is a facility in XSB for the programmer to direct the
+system to choose what predicates to table, in which case the system
+will generate table directives automatically.  There are two
+directives that control this process: \verb|auto_table/0| and
+\verb|suppl_table/1|.  When such a directive is placed in a source
+file, it applies to all predicates in that file when it is compiled.
+
+{\tt auto\_table/0} causes the compiler to table enough predicates to
+avoid infinite loops due to redundant procedure calls.  The current
+implementation of \verb|auto_table| uses the call graph of the
+program.  There is a node in the call graph of a program for each
+predicate, \verb|P/N|, that appears in the program.  There is an edge
+from node for predicate \verb|P/N| to the node for predicate
+\verb|Q/M| if there is a rule in the program with an atom with
+predicate \verb|P/N| in the head and a literal with predicate
+\verb|Q/M| in the body.  The algorithm constructs the call graph and
+then chooses enough predicates to table to ensure that all loops in
+the call graph are broken.  The algorithm, as currently implemented in
+XSB, finds a minimal set of nodes that breaks all cycles. The
+algorithm can be exponential in the number of predicates in the worst
+case\footnote{The algorithm to find such a minimal set of predicates
+corresponds to the {\em feedback vertex set} problem and is
+NP-Complete \cite{GaJo79}.}.  If the program is a Datalog program,
+i.e., it has no recursive data structures, then \verb|auto_table| {\em
+is} guaranteed to make all queries to it terminate finitely.
+Termination of general programs is, of course, undecidable, and
+\verb|auto_table| may or may not improve their termination
+characteristics.
+
+The goal of \verb|auto_table| is to guarantee termination of Datalog
+programs, but there are other uses tabling.  Tabling can have a great
+effect on the efficiency of terminating programs.  Example
+\ref{multi-join} illustrates how a multiway join predicate can use
+tabling to eliminate redundant subcomputations.
+
+\begin{example}{}\label{multi-join}
+Consider the following set of relations describing a student database
+for a college:
+\begin{enumerate}
+\item student(StdId,StdName,Yr):
+  Student with ID \verb|StdId| and name \verb|StdName| is in year
+  \verb|Yr|, where year is 1 for freshman, 2 for sophomores, etc.
+\item enroll(StdId,CrsId):
+  Student with ID \verb|StdId| is enrolled in the course with number
+  \verb|CrsId|.
+\item course(CrsId,CrsName):
+  Course with number \verb|CrsId| has name \verb|CrsName|.
+\end{enumerate}
+We define a predicate \verb|yrCourse/2|, which, given a year,
+finds all the courses taken by some student who is in that year:
+\begin{verbatim}
+yrCourse(Yr,CrsName) :- 
+    student(StdId,_,Yr), enroll(StdId,CrsId), course(CrsId,CrsName).
+\end{verbatim}
+Note that it will most likely be the case that if one student of a
+given year takes a course then many students in the same year will
+take that same course.  Evaluated directly, this definition will result
+in the course name being looked up for every student that takes a
+given course, not just for every course taken by some student.  By
+introducing an intermediate predicate, and tabling it, we can
+elminate this redundancy:
+\begin{verbatim}
+yrCourse(Yr,CrsName) :- 
+    yrCrsId(Yr,CrsId), course(CrsId,CrsName).
+
+:- table yrCrsId/2.
+yrCrsId(Yr,CrsId) :-
+    student(StdId,_,Yr), enroll(StdId,CrsId).
+\end{verbatim}
+The intermediate predicate \verb|yrCrsId| is tabled and so will
+eliminate duplicates.  Thus \verb|course| will only be accessed once
+for each course, instead of once for each student.  This can make a
+very large difference in evaluation time.
+\end{example}
+
+In this example a table has been used to eliminate duplicates that
+arise from the database operations of a join and a projection.  Tables
+may also be used to eliminate duplicates arising from unions.
+
+The \verb|suppl_table/1| directive is a means by which the programmer
+can ask the XSB system to perform such factoring automatically.  The
+program:
+\begin{verbatim}
+:- edb student/3, enroll/2, course/2.
+:- suppl_table(2).
+yrCourse(Yr,CrsName) :- 
+    student(StdId,_,Yr), enroll(StdId,CrsId), course(CrsId,CrsName).
+\end{verbatim}
+will automatically generate a program equivalent to the one above with
+the new intermediate predicate and the table declaration.
+
+To understand precisely how \verb|suppl_table| works, we need to
+understand some distinctions and definitions of deductive databases.
+Predicates that are defined by sets of ground facts can be designated
+as {\em extensional predicates}.  The extensional predicates make up
+the extensional database (EDB).  The remaining predicates are called
+{\em intensional predicates}, which make up the intensional database
+(IDB), and they usually have definitions that depend on the
+extensional predicates.  In XSB the declaration:
+\begin{verbatim}
+           :- edb student/3, enroll/2, course/2.
+\end{verbatim}
+declares three predicates to be extensional predicates.  (Their
+definitions will have to be given elsewhere.)  We define the data
+dependency count of an IDB clause to be the number of tabled IDB
+predicate it depends on plus the number of EDB predicates it depends
+on ({\em not} through a tabled IDB predicate.)  The command:
+\begin{verbatim}
+       :- suppl_table(2).
+\end{verbatim}
+instructs XSB to factor any clause which has a data dependency count
+of greater than two.  In Example \ref{multi-join} the data dependency
+count of the original form of {\tt join/2} is three, while after
+undergoing supplementary tabling, its count is two.  Choosing a higher
+number for \verb|suppl_table| results in less factoring and fewer
+implied table declarations.
+
+The next subsection describes somewhat more formally how these
+transformations affect the worst-case complexity of query evaluation.
+
+\subsubsection{On the Complexity of Tabled Datalog Programs}
+
+The worst-case complexity of a Datalog program (with every predicate
+tabled) is:
+\[\sum_{clause} (len(clause) + k^{num\_of\_vars(body(clause))})\]
+where $k$ is the number of constants in the Herbrand base (i.e., in
+the program).  One can see how this can be achieved by making all base
+relations to be cross products of the set of constants in the program.
+Assume the call is completely open.  Then if there are $v_1$ variables
+in the first subgoal, there will be $k^{v_1}$ tuples.  Each of theses
+tuples will be extended through the second subgoal, and consider how
+many tuples from the second subgoal there can be: $k^{v_2}$ where
+$v_2$ is the number of variables appearing in the second subgoal and
+not appearing in the first.  So to get through the second subgoal will
+take time $k^{v_1}*k^{v_2}$.  And similarly through the entire body of
+the clause.  Each subgoal multiplies by a factor $k^v$ where $v$ is
+the number of new variables.  And every variable in the body of the
+clause is new once and only once.  This is the reason for the second
+component in the summation above.  The first component is just in case
+there are no variables in the clause.  For an entire program one can
+see that the complexity (for a nonpropositional) datalog program is
+$O(k^v)$ where $v$ is the maximum number of variables in the body of
+any clause.
+
+We can use folding to try to improve the worst-case efficiency of a
+Datalog program.  Consider the query:
+
+\begin{verbatim}
+(7) :- p(A,B,C,D),q(B,F,G,A),r(A,C,F,D),s(D,G,A,E),t(A,D,F,G).
+\end{verbatim}
+
+It has 7 variables (as indicated by the number in parentheses that
+precedes the query), so its worst-case efficiency is $O(n^7)$.
+However, we can fold the first two subgoals by introducing a new
+predicate, obtaining the following program:
+
+\begin{verbatim}
+(6) :- f1(A,C,D,F,G),r(A,C,F,D),s(D,G,A,E),t(A,D,F,G).
+(6) f1(A,C,D,F,G) :- p(A,B,C,D),q(B,F,G,A).
+\end{verbatim}
+
+This one has a maximum of 6 variables in the query or in the
+right-hand-side of any rule, and so has a worst-case complexity of
+$O(n^6)$.
+
+We can do a couple of more folding operations as follows:
+
+\begin{verbatim}
+(5) :- f2(A,D,F,G),s(D,G,A,E),t(A,D,F,G).
+(5) f2(A,D,F,G) :- f1(A,C,D,F,G),r(A,C,F,D).
+(6) f1(A,C,D,F,G) :- p(A,B,C,D),q(B,F,G,A).
+
+(4) :- f2(A,D,F,G),f3(D,G,A),t(A,D,F,G).
+(4) f3(D,G,A) :- s(D,G,A,E).
+(5) f2(A,D,F,G) :- f1(A,C,D,F,G),r(A,C,F,D).
+(6) f1(A,C,D,F,G) :- p(A,B,C,D),q(B,F,G,A).
+\end{verbatim}
+
+Thus far, we have maintained the order of the subgoals.  If we allow
+re-ordering, we could do the following.  For each variable, find all
+the variables that appear in some subgoal that it appears in.  Choose
+the variable so associated with the fewest number of other variables.
+Factor those subgoals, which removes that variable (at least).
+Continue until all variables have the same number of associated
+variables.
+
+Let's apply this algorithm to the initial query above.  First we give
+each variable and the variables that appear in subgoals it appears in.
+
+\begin{verbatim}
+A:BCDEFG
+B:ACDFG
+C:ABDF
+D:BCDEFG
+E:ADG
+F:ABGCD
+G:ABFDE
+\end{verbatim}
+
+Now E is the variable associated with the fewest number of other
+variables, so we fold all the literals (here only one) containing E,
+and obtain the program:
+
+\begin{verbatim}
+(6) :- p(A,B,C,D),q(B,F,G,A),r(A,C,F,D),f1(D,G,A),t(A,D,F,G).
+(4) f1(D,G,A) :- s(D,G,A,E).
+\end{verbatim}
+
+Now computing the new associated variables for the first clause, and
+then choosing to eliminate C, we get:
+
+\begin{verbatim}
+A:BCDFG
+B:ACDFG
+C:ABDF
+D:ABCFG
+F:ABGCD
+G:ABFD
+
+(5) :- f2(A,B,D,F),q(B,F,G,A),f1(D,G,A),t(A,D,F,G).
+(4) f1(D,G,A) :- s(D,G,A,E).
+(5) f2(A,B,D,F) :- p(A,B,C,D),r(A,C,F,D).
+\end{verbatim}
+
+Now computing the associated variables for the query, we get:
+
+\begin{verbatim}
+a:bdfg
+b:adfg
+d:abfg
+f:abdg
+g:abfd
+\end{verbatim}
+
+All variables are associated with all other variables, so no factoring
+can help the worst-case complexity, and the complexity is $O(k^5)$.
+
+However, there is still some factoring that will eliminate variables,
+and so might improve some queries, even though it doesn't guarantee to
+reduce the worst-case complexity.
+
+\begin{verbatim}
+(4) :- f3(A,D,F,G),f1(D,G,A),t(A,D,F,G).
+(5) f3(A,D,F,G) :- f2(A,B,D,F),q(B,F,G,A).
+(4) f1(D,G,A) :- s(D,G,A,E).
+(5) f2(A,B,D,F) :- p(A,B,C,D),r(A,C,F,D),
+
+(3) :- f4(A,D,G),f1(D,G,A).
+(4) f4(A,D,G) :- f3(A,D,F,G),t(A,D,F,G).
+(5) f3(A,D,F,G) :- f2(A,B,D,F),q(B,F,G,A).
+(4) f1(D,G,A) :- s(D,G,A,E).
+(5) f2(A,B,D,F) :- p(A,B,C,D),r(A,C,F,D).
+\end{verbatim}
+
+The general problem of finding an optimal factoring is conjectured to
+be NP hard.  (Steve Skiena has the sketch of a proof.)
+
+
+\section{Datalog Optimization in XSB}
+
+[Do we want to do it at all, and if so, here?]
+I think we do want it, but I don't know about here.
+

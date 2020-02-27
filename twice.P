@@ -1,0 +1,12 @@
+% twice(successor)(1,X).
+% twice(twice(successor))(1,X).
+% twice(twice(square))(2,X).
+:- hilog twice.
+twice(X,twice(X)).
+twice(F)(X,R) :- F(X,U), F(U,R).
+
+:- hilog successor,double,square.
+
+successor(X,Y) :- Y is X+1.
+double(X,Y) :- Y is X+X.
+square(X,Y) :- Y is X*X.

@@ -1,0 +1,55 @@
+(from:
+http://www.rci.rutgers.edu/~cfs/305_html/Deduction/ResolutionTP.html
+adapted from E. Rich and K Knight, Artificial Intelligence. Second
+Edition.NY: McGraw Hill, 1991)
+
+Marcus is a man:
+     1.  man(marcus)
+
+Marcus is a pompeian
+     2.  pompeian(marcus)
+
+All Pompeians are Romans
+    forall(x,pompeian(x)->Roman(x))
+    3. ~pompeian(x) \/ roman(x)
+
+Caesar is a ruler
+       4. ruler(caeser)
+
+All Romans are either loyal to Caesar or hate Caesar
+    forall(x,roman(x)-> loyalto(x,caesar)\/hate(x,caesar))
+    5. ~roman(x) \/ loyalto(x,caesar) \/ hate(x,caesar)
+
+Everyone is loyal to someone
+   forall(x,thereis(y,loyalto(x,y)))
+   6. loyalto(x,f1(x))
+
+People only try to assassinate rules they are not loyal to.
+  forall(x,forall(y,person(x)/\ruler(y)/\tryassassinate(x,y)->~loyalto(x,y)))
+  7. ~man(x)\/~ruler(y)\/~tryassassinate(x,y)\/~loyalto(x,y)
+
+Marcus tries to assassinate Caesar
+  8. tryassassinate(marcus,caesar)
+
+==============
+try to prove: Marcus hates Caesar:
+
+add 9. ~hates(marcus,caesar)
+and use resolution to try to show unsatisfiable.
+
+9   5
+|  /
+<>  3
+|  /
+<>  2
+|  /
+<>  7
+|  /
+<>  1
+|  /
+<>  4
+|  /
+<>  8
+
+Linear resolution.
+

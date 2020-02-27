@@ -1,0 +1,55 @@
+/* a simple context sensitive grammar:
+
+S --> aSBC
+S --> aBC
+CB --> BC
+aB --> ab
+bB --> bb
+bC --> bc
+cC --> cc
+
+*/
+
+:- auto_table.
+
+% S --> aSBC
+s(S0,S) :- word(S0,a,S1),s(S1,S2),b(S2,S3),c(S3,S).
+
+% S --> aBC
+s(S0,S) :- word(S0,a,S1),b(S1,S2),c(S2,S).
+
+% CB --> BC
+c(S0,p0(S0,S)) :- b(S0,S1),c(S1,S).
+b(p0(S0,S),S) :- b(S0,S1),c(S1,S).
+
+% aB --> ab
+word(S0,a,p1(S0,S)) :- word(S0,a,S1),word(S1,b,S).
+b(p1(S0,S),S) :- word(S0,a,S1),word(S1,b,S).
+
+% bB --> bb
+word(S0,b,p2(S0,S)) :- word(S0,b,S1),word(S1,b,S).
+b(p2(S0,S),S) :- word(S0,b,S1),word(S1,b,S).
+
+% bC --> bc
+word(S0,b,p3(S0,S)) :- word(S0,b,S1),word(S1,c,S).
+c(p3(S0,S),S) :- word(S0,b,S1),word(S1,c,S).
+
+% cC --> cc
+word(S0,c,p4(S0,S)) :- word(S0,c,S1),word(S1,c,S).
+c(p4(S0,S),S) :- word(S0,c,S1),word(S1,c,S).
+
+% word can also be a base_word
+word(X,Y,Z) :- base_word(X,Y,Z).
+
+% driver to assert base_word's and call the recognizer.
+parse(String) :-
+	abolish_all_tables,
+	retractall(base_word(_,_,_)),
+	assertlist(String,0,Len),
+	s(0,Len).
+
+assertlist([],N,N).
+assertlist([Sym|Syms],N,M) :-
+	N1 is N+1,
+	assert(base_word(N,Sym,N1)),
+	assertlist(Syms,N1,M).

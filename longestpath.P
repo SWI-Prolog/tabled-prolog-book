@@ -1,0 +1,16 @@
+% longest path (without loops)
+:- import bagMax/2 from aggregs.
+:- import member/2 from basics.
+
+longpath(X,Y,P)(D) :- edge(X,Y,D), P=[F|R], \+member(F,R).
+longpath(X,Y,P)(D) :- 
+	bagMax(longpath(X,Z,[Z|P]),D), edge(Z,Y,D), Y\==Z, \+member(Y,P).
+
+:- hilog maximum.  maximum(X,Y,Z) :- X @< Y -> Z=Y ; Z=X.
+
+edge(a,b,5).
+edge(a,b,6).
+edge(a,d,4).
+edge(d,b,5).
+edge(b,c,3).
+edge(b,c,4).

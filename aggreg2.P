@@ -1,0 +1,66 @@
+/********* minimal strolls through the park***************/
+:- import member/2 from basics.
+
+
+subset([],_L).
+subset([X|L1],L2) :- member(X,L2), subset(L1,L2).
+
+:- table walk(_,_,subset/2).
+walk(X,Y,[Y,X]) :- edge(X,Y).
+walk(X,Y,[Y|P]) :- walk(X,Z,P), edge(Z,Y).
+
+
+edge(a,b).
+edge(b,c).
+edge(b,d).
+edge(c,b).
+edge(c,d).
+edge(d,e).
+edge(a,f).
+edge(f,g).
+edge(g,e).
+
+/************************************************************/
+
+maximum(X,Y,Z) :- Z is max(X,Y).
+
+
+% small_cap(BigSize,BigCap) if there is some item with ISize and IVal
+% such that the capacity of a knapsack of size (BigSize-ISize) has
+% capacity (BigCap-Ival).
+:- table cap(_,maximum/3- (-1000)).
+:- table cap/2.
+cap(BigSize,BigCap) :- 
+	BigSize >= 0,
+	item(ISize,IVal),
+	SmallSize is BigSize-ISize,
+	cap(SmallSize,SmallCap),
+	BigCap is IVal+SmallCap.
+% every knapsack (>=0) has capacity of 0.
+cap(BigSize,0) :- BigSize >= 0.
+
+item(10,15).
+item(8,14).
+item(6,10).
+item(4,6).
+item(2,2).
+/*********************************************************/
+
+
+:- table grid(_,_,lattice(max(_,_),0)).
+
+grid(_,1,X) :-  !, X = 1.
+grid(_,5,X) :- !, X = 5.
+grid(1,J,X) :- !, X = J.
+grid(5,J,X) :- !, X = J.
+grid(I,J,X) :-
+	Ip1 is I+1, Im1 is I-1,
+	Jp1 is J+1, Jm1 is J-1,
+	grid(Ip1,J,X1),
+	grid(Im1,J,X2),
+	grid(I,Jp1,X3),
+	grid(I,Jm1,X4),
+	X is (X1+X2+X3+X4) / 4.
+grid(_,_,0).
+
+max(X,Y,M) :- (Y > X -> M = Y ; M = X).

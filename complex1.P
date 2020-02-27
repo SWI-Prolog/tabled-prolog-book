@@ -1,0 +1,29 @@
+t1 :- p(A,B,C,D),p(B,F,G,A),p(A,C,F,D),p(D,G,A,E),p(A,D,F,G).
+
+p(A,B,C,D) :- d(A),d(B),d(C),d(D).
+p(A,B,C) :- d(A),d(B),d(C).
+
+d(1).
+d(2).
+d(3).
+d(4).
+d(5).
+d(6).
+d(7).
+d(8).
+
+t2 :- p(A,B,C,D),p(B,F,G,A),p(A,C,F,D),f1(D,G,A),p(A,D,F,G).
+f1(D,G,A) :- p(D,G,A,E).
+
+t3 :- f2(A,B,D,F),p(B,F,G,A),f1(D,G,A),p(A,D,F,G).
+f2(A,B,D,F) :- p(A,B,C,D),p(A,C,F,D).
+
+t4 :- f3(A,D,F,G),f1(D,G,A),p(A,D,F,G).
+f3(A,D,F,G) :- f2(A,B,D,F),p(B,F,G,A).
+
+t5 :- f4(A,D,G),f1(D,G,A).
+f4(A,D,G) :- f3(A,D,F,G),p(A,D,F,G).
+
+q1 :- p(A,B,C),p(B,B,D),p(D,B,C).
+
+q2 :- p(A,B,C).

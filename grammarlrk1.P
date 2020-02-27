@@ -1,0 +1,83 @@
+/* parse with tabling to get a lr(k)-like algorithm.  This passes a
+set of follow-ing strings as the follow set. */
+
+:- import length/2,append/3,member/2 from basics.
+at :- abolish_all_tables.
+
+:- table parse/4.
+parse(Sym,Follows,Str0,Str) :-
+	rule(Sym,RB),
+	parseSF(RB,Follows,Str0,Str),
+	writeln(p((Sym-->RB),Str0,Str)).
+
+parseSF([],Follows,Str0,Str) :- !,Str0=Str,
+	member(Follow,Follows),
+	next_str(Follow,Str).
+parseSF([Sym|SF],Follows,Str0,Str) :- 
+	nonterminal(Sym),
+	firstKs(SF,Follows,FollowsSym),
+	parse(Sym,FollowsSym,Str0,Str1),
+	parseSF(SF,Follows,Str1,Str).
+parseSF([Term|SF],Follows,Str0,Str) :- 
+	word(Str0,Term,Str1),
+	parseSF(SF,Follows,Str1,Str).
+
+
+firstKs(SF,Follows,Firsts) :-
+	findall(First,
+		(member(Follow,Follows),
+		 same_length(Follow,First),
+		 firstK(SF,Follow,First)),
+		Firsts).
+
+next_str([],_).
+next_str(['$'|_],S) :- \+ word(S,_,_).  % end of string
+next_str([Sym|Syms],S) :- word(S,Sym,S1),next_str(Syms,S1).
+
+:- table firstK/3.
+% firstK(SF,Follow,First)
+firstK(_,_,[]).
+firstK([],[S|Follows],[S|Firsts]) :- append(Firsts,_,Follows).
+firstK([NT|SF],Follow,First) :-
+	nonterminal(NT),
+	same_length(Follow,NTFollow),
+	firstK(SF,Follow,NTFollow),
+	rule(NT,Body),
+	firstK(Body,NTFollow,First).
+firstK([T|SF],Follows,[T|Firsts]) :-
+	\+ nonterminal(T),
+	firstK(SF,Follows,Firsts).
+
+same_length([],[]).
+same_length([_|I],[_|O]) :- same_length(I,O).
+
+nonterminal(S) :- rule(S,_),!.
+
+%%| ?- parse(s,[['$','$']],0,14).
+
+/* S -> A B.
+   A -> aA | a.
+   B -> Bb | b.
+*/
+rule(s,[an,bn]).
+rule(an,[a,an]).
+rule(an,[a]).
+rule(bn,[bn,b]).
+rule(bn,[b]).
+
+word(0,a,1).
+word(1,a,2).
+word(2,a,3).
+word(3,a,4).
+word(4,a,5).
+word(5,a,6).
+word(6,a,7).
+word(7,a,8).
+word(8,a,9).
+word(9,a,10).
+word(10,a,11).
+word(11,a,12).
+word(12,b,13).
+word(13,b,14).
+%word(14,'$',15).
+%word(15,'$',16).

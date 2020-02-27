@@ -1,0 +1,137 @@
+% include needed predicates
+    maximum(X,Y,Z) :- X>=Y -> Z=X; Z=Y.
+    sum(X,Y,Z) :- Z is X+Y.
+
+% The total cost is the sum of the raises.
+    :- table totcost(fold(sum/3,0)).
+    totcost(Cost) :- raise(Cost).
+
+% A raise is the max of the posible new salaries (own and
+% subordinates' salaries) minus the old salary.
+    raise(Raise) :- 
+        possNewSal(Emp,NSal),
+        emp(Emp,_,OSal), 
+        Raise is NSal-OSal.
+
+% A possible new salary is either one's old salary or the max of the
+% possible new salaries of one's immediate subordinates.
+    :- table(possNewSal(_,lattice(maximum/3))).
+    possNewSal(Emp,Sal) :- emp(Emp,_,Sal).
+    possNewSal(Emp,Sal) :- 
+        dept(Dept,Emp), emp(Sub,Dept,_), 
+        possNewSal(Sub,Sal).
+
+% dept(Dept,Mgr): department data
+    dept(univ,provost).
+    dept(ceas,deanCEAS).
+    dept(cs,chairCS).
+    dept(ee,chairEE).
+
+% emp(Name,Dept,Salary):
+    emp(provost,univ,87000).
+    emp(deanCEAS,univ,91000).
+    emp(chairCS,ceas,95000).
+    emp(chairEE,ceas,93000).
+    emp(prof1CS,cs,65000).
+    emp(prof2CS,cs,97000).
+    emp(prof1EE,ee,90000).
+    emp(prof2EE,ee,94000).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+maximum(X,Y,Z) :- X>=Y -> Z=X; Z=Y.
+
+:- table cap/2.
+% cap(Size,Cap) if capacity of knapsick of size Size is Cap.
+cap(I,Cap) :- I >= 0, small_cap(I,Cap).
+
+% small_cap(BigSize)(BigCap) if there is some item with ISize and IVal
+% such that the capacity of a knapsack of size (BigSize-ISize) has
+% capacity (BigCap-Ival).
+:- table small_cap(_,lattice(maximum/3)).
+small_cap(BigSize,BigCap) :- 
+	item(ISize,IVal),
+	SmallSize is BigSize-ISize,
+	cap(SmallSize,SmallCap),
+	BigCap is IVal+SmallCap.
+% every knapsack (>=0) has capacity of 0.
+small_cap(BigSize,0) :- BigSize >= 0.
+
+%%Data:
+item(10,18).
+item(8,14).
+item(6,10).
+item(4,6).
+item(2,2).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+minimum(X,Y,Z) :- X=<Y -> Z=X; Z=Y.
+
+% mult_costI,J,C) if C is the cost of the cheapest way to compute the
+% product M_I x M_{I+1} x ... x M_J.
+mult_cost(I,I,0).
+mult_cost(I,J,C) :- I<J, factor(I,J,C).
+
+% factor(I,J) is true of costs obtained by computing the product of
+% matrices between I and J by factoring the chain at any point between
+% I and J and assuming optimal costs for the two factors.
+:- table factor(_,_,lattice(minimum/3)).
+
+factor(I,J,C) :- 
+	J1 is J-1,
+	between(I,K,J1),
+	mult_cost(I,K,C1),
+	K1 is K+1,
+	mult_cost(K1,J,C2),
+	I1 is I-1,
+	r(I1,Ri1), r(K,Rk), r(J,Rj),
+	C is C1+C2+Ri1*Rk*Rj.
+
+between(X,X,Z) :- X =< Z.
+between(X,Y,Z) :- X < Z, X1 is X+1, between(X1,Y,Z).
+
+% r(I,N) if N is the number of rows in the I-1st (+ ?) matrix.  (The last is
+% the number of columns in the last matrix.)
+r(0,5).
+r(1,3).
+r(2,6).
+r(3,9).
+r(4,7).
+r(5,2).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    :- import member/2,append/3, reverse/2 from basics.
+
+% stroll(X,Y,Path) if Path is a way to go from X to Y seeing many things.
+    stroll(X,Y,Path) :- walk(X,Y,BPath), reverse(BPath,Path).
+
+% supset(L1,L2) if L1 is a supset of L2.
+    :- index supset/2-2.
+    supset(_,[]).
+    supset(L2,[X|L1]) :- member(X,L2), supset(L2,L1).
+
+% L is in walk(X,Y) if L is a (reversed) path from X to Y.
+% (must be tabled because of left-recursion.)
+    :- table walk(_,_,po(supset1/2)).
+    walk(X,Y,[Y,X]) :- edge(X,Y), writeln(ret([X,Y,Y,X])).
+    walk(X,Y,[Y|P]) :- walk(X,Z,P), edge(Z,Y), writeln(ret(X,Y,[Y|P])).
+
+/**    edge(a,b).
+    edge(b,c).
+    edge(b,d).
+    edge(c,d).
+    edge(d,e).
+    edge(d,a).
+    edge(a,e).
+    edge(a,f).
+    edge(f,g).
+    edge(f,a).
+edge(g,e). **/
+
+edge(a,b).
+edge(a,d).
+edge(d,b).
+edge(b,a).
+edge(b,c).

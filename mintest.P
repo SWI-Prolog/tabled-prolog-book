@@ -1,0 +1,41 @@
+:- import aggregInit/0, bagMin/2, bagReduce/4 from myaggregs.
+:- import get_calls/3, get_returns/2 from trie_tables.
+
+% This computes the shortest path in a graph.
+% The goal is: sp(a,Y,C).
+
+sp(X,Y,C) :- aggregInit, bagMin(sp(X,Y),C).
+
+sp(X,Y)(C) :- edge(X,Y,C).
+sp(X,Y)(C) :- bagMin(sp(X,Z),C1), edge(Z,Y,C2), C is C1+C2.
+
+:- hilog minimum.
+minimum(X,Y,Z) :- X @=< Y -> Z = X ; Z = Y.
+
+
+% This computes the minimum cost spanning tree.
+% The goal is: mcst(a,S,T).
+
+mcst(X,F,Z) :- aggregInit, bagReduce(mcst(X,Z),[_C,F],min1,[134000000]).
+
+mcst(X,Y)([C,X]) :- edge(X,Y,C).
+mcst(X,Y)([C,Z]) :- 
+	bagReduce(mcst(X,Z),[C1,_],min1,[134000000]),	%works!
+	edge(Z,Y,C2), 
+	C is C1+C2.
+
+:- hilog min1.
+min1([C1|F1],[C2|F2],[C3|F3]) :- 
+	C1 @=< C2
+	 ->	C3 = C1, F3 = F1
+	 ;	C3 = C2, F3 = F2.
+
+edge(a,b,5).
+edge(b,d,6).
+edge(b,c,1).
+edge(c,e,3).
+edge(e,d,1).
+edge(a,c,7).
+edge(c,d,2).
+
+

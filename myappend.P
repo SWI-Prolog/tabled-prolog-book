@@ -1,0 +1,11 @@
+   append([],L,L).
+   append([X|L1],L2,[X|L3]) :-
+	append(L1,L2,L3).
+
+member(X,[X|_L]).
+member(X,[_Y|L]) :- member(X,L).
+
+reverse([],[]).
+reverse([X|T],R) :-
+	reverse(T,TR),
+	append(TR,[X],R).
