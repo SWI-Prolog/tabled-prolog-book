@@ -569,7 +569,7 @@ The syntax of FOL is:
 term_list --> term, term_tail.
 
 term_tail --> [].
-term_tail --> [','], term_tail.
+term_tail --> term, [','], term_tail.
 
 term --> [Atom], {fun_sym(Atom}}, opt_par_term_list.
 term --> [X],{var_sym(X)}.
