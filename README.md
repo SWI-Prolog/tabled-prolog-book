@@ -19,44 +19,6 @@ To compile `book.pdf`, run
 
 To remove the generated files: `git clean -fxd`
 
-If you're on Ubuntu or similar Linux system, these packages should
-suffice:
-
-    texlive-latex-base
-    texlive-fonts-recommended
-    texlive-fonts-extra
-    texlive-latex-extra
-    texlive-bibtex-extra
-
-The `*.fig` files can be opened using `xfig` from package `xfig`; they
-can be translated into various formats using package `fig2dev`; the
-`*.eps` files can be viewed using `gio open`, `gv`, `evince`, or
-`gimp`.
-
-The following files exist only as `.eps`:
-
-    figures/retr.eps
-    figures/small-winbtree.eps
-    figures/slg_forest.eps
-    figures/terry4.eps
-    figures/Completion.1.eps
-    figures/xsb-logo.eps
-    figures/blacken.eps
-    figures/join_in_prolog.eps
-    figures/call-dep.eps.eps
-    figures/Completion.3.eps
-    figures/Completion.2.eps
-    figures/dep-graph.eps
-    figures/CDG.1.eps
-    figures/sld-append1.eps
-    figures/opt-of-algo.eps
-    figures/slide1.eps
-    figures/terry5.eps
-
-The other `.eps` files can be created using this command:
-
-    find . -name '*.fig' | sed 's/\.fig$//' | xargs -L1 -I '{}' fig2dev -L eps '{}.fig' '{}.eps'
-
 ## Preface
 
 By _Jan Wielemaker_
@@ -101,3 +63,67 @@ insights in how to tabling can be used efficiently.
 David has made  this  source  available  with   the  intend  to  get  it
 translated into a community maintained (Wiki)   text  on applying tabled
 logic programming.   Making the source accessible is the first step.
+
+## Packages needed to create book.pdf
+
+
+If you're on Ubuntu or similar Linux system, these packages should
+suffice:
+
+    texlive-latex-base
+    texlive-fonts-recommended
+    texlive-fonts-extra
+    texlive-latex-extra
+    texlive-bibtex-extra
+
+## Figures
+
+The `*.fig` files can be opened using `xfig` from package `xfig`; they
+can be translated into various formats using package `fig2dev`; the
+`*.eps` files can be viewed using `gio open`, `gv`, `evince`, or
+`gimp`.
+
+The following figures are used within the book:
+
+    figures/detm0s1s2s.eps
+    figures/efreem0s1s2s.eps
+    figures/expgraph.eps
+    figures/m0s1s2s.eps
+    figures/sld-append1.eps
+    figures/slgf-owe1.eps
+    figures/slgf-owe2.eps
+    figures/slgf-owe3.eps
+    figures/slgf-owe4.eps
+    figures/slgf-owe5.eps
+    figures/slgf-owel1.eps
+    figures/slgf-owel2.eps
+    figures/slgf-owel3.eps
+    figures/slgf-owel4.eps
+    figures/small-winbtreed.eps
+
+The following files exist only as `.eps`:
+
+    figures/retr.eps
+    figures/small-winbtree.eps
+    figures/slg_forest.eps
+    figures/terry4.eps
+    figures/Completion.1.eps
+    figures/xsb-logo.eps
+    figures/blacken.eps
+    figures/join_in_prolog.eps
+    figures/call-dep.eps.eps
+    figures/Completion.3.eps
+    figures/Completion.2.eps
+    figures/dep-graph.eps
+    figures/CDG.1.eps
+    figures/sld-append1.eps
+    figures/opt-of-algo.eps
+    figures/slide1.eps
+    figures/terry5.eps
+
+The `.eps` files can be created from the corresponding `.fig` files
+using this command:
+
+    find . -name '*.fig' | sed 's/\.fig$//' | xargs -L1 -I '{}' fig2dev -L eps '{}.fig' '{}.eps'
+
+
