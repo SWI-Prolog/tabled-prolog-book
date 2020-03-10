@@ -1,17 +1,31 @@
 # Programming in Tabled Prolog (very) DRAFT
 
 This repository contains the LaTeX sources  for   a  book with the above
-title written by David S. Warren. Please take care of the notice
+title written by David S. Warren. Please take care of this notice:
 
 > This is a very early draft made available privately for those who
 > might find it of interest. I reserve all rights to this work. -dsw
 
 To compile `book.pdf`, run
 
-    pdflatex book
+    latex book
     bibtex book
-    pdflatex book
-    pdflatex book
+    latex book
+    latex book
+    dvipdf book
+
+(The `pdflatex` command doesn't properly handle the `eps` figures, so
+`latex` + `dvipdf` is used instead.)
+
+To remove the generated files: `git clean -fxd`
+
+If you're on Ubuntu or similar Linux system, these packages should
+suffice: `texlive-latex-base`, `texlive-fonts-recommended`,
+`texlive-fonts-extra`, `texlive-latex-extra`, `texlive-bibtex-extra`.
+The `*.fig` files can be opened using `xfig` from package `xfig`; they
+can be translated into various formats using package `fig2dev`; the
+`*.eps` files can be viewed using `gio open`, `gv`, `evince`, or
+`gimp`.
 
 ## Preface
 
